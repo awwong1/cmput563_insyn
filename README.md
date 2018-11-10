@@ -29,8 +29,8 @@ $ sqlite3 -version
 
 1. Ensure the required sqlite files are available in `./data` (see [`./data/README.md`](data/README.md))
 2. Initialize and start pip environment.
-  - `pipenv install`
-  - `pipenv shell`
-3. 
+    - `pipenv install`
+    - `pipenv shell`
+3. Run `./insyn.py`
 
 [MIT License](LICENSE).

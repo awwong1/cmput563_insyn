@@ -3,7 +3,6 @@
 University of Alberta, CMPUT 563 Fall 2018
 """
 
-import sys
 import sqlite3
 from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
 
@@ -16,23 +15,17 @@ class KeyPrinter(JavaParserListener):
     Tree stepper class for printing rules, hacked on from
     https://www.antlr.org/api/Java/org/antlr/v4/runtime/tree/ParseTreeListener.html
     """
+
     def enterEveryRule(self, ctx):
-        print("ENTER", type(ctx.getRuleContext()))
-        #print("enterRule, invokingState", ctx.invokingState, ctx)
-        #print("\tSTART:", ctx.start)
-        #print("\tSTOP:", ctx.stop)
+        print("ENTER", type(ctx.getRuleContext()).__name__)
 
     def exitEveryRule(self, ctx):
-        print("EXIT", type(ctx.getRuleContext()))
-        #print("exitRule, invokingState", ctx.invokingState)
-        #print("\tSTART:", ctx.start)
-        #print("\tSTOP:", ctx.stop)
-        pass
+        print("EXIT", type(ctx.getRuleContext()).__name__)
 
     def visitTerminal(self, node):
         print("\t", node)
 
-def main(*args, **kwargs):
+def main():
     """INSYN script function. Currently only parses sources into grammar trees."""
 
     conn = sqlite3.connect("data/java-sources-20170628.sqlite3")
