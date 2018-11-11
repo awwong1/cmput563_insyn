@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from nltk.parse.generate import generate
 from nltk import CFG, ngrams
 import numpy as np
