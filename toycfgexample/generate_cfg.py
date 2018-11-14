@@ -248,7 +248,7 @@ if __name__ == "__main__":
 	lengths = [len(i) for i in all_samples]
 
 	# Create HMM Model
-	model = hmm.MultinomialHMM(n_components=3, n_iter=50).fit(train_data)
+	model = hmm.MultinomialHMM(n_components=3, n_iter=20).fit(train_data)
 	hidden_states = model.predict(train_data)
 
 	# Pretty print
