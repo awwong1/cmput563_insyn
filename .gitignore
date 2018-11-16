@@ -204,3 +204,5 @@ pip-selfcheck.json
 
 # editors
 .vscode
+
+grammar/.antlr
