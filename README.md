@@ -35,21 +35,24 @@ $ sqlite3 -version
 
 ```bash
 $ ./insyn.py 
-usage: insyn.py [-h] [-v] [-p] [-o DB_OFFSET]
+usage: insyn.py [-h] [-v] [-p [offset]] [-g] [-f input.java]
 
 Reccomendation Models for Syntactically Incorrect Source Code
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         increase output verbosity
-  -p, --parse-example   example output sequence from sqlite3 db
-  -o DB_OFFSET, --db-offset DB_OFFSET
-                        in example, number of sqlite3 db rows to offset
+  -p [offset], --parse-db [offset]
+                        example output sequence from sqlite3 db
+  -g, --generate-structure
+                        generate HHMM structure from grammar
+  -f input.java, --fix input.java
 ```
 
 ```bash
-$ ./insyn.py --parse-example --db-offset 0
-============== SOURCE CODE ==============
+$ ./insyn.py --parse-db
+
+============== ANTLR TREE ==============
 package com.cl.interpolatordebugger;
 
 import android.app.Application;
@@ -65,7 +68,12 @@ public class ApplicationTest extends ApplicationTestCase<Application> {
 }
 
 ============== PARSED CODE ==============
-{<R:0> {<R:1> <T:32> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:3> {<R:5> <T:35> } {<R:7> <T:9> <T:111> <T:17> {<R:98> {<R:39> <T:111> {<R:100> <T:72> {<R:40> {<R:98> {<R:39> <T:111> } } } <T:71> } } } {<R:16> <T:63> {<R:18> {<R:4> {<R:5> <T:35> } } {<R:19> {<R:25> <T:111> {<R:42> <T:61> <T:62> } {<R:63> <T:63> {<R:64> {<R:67> {<R:82> {<R:81> <T:40> <T:61> {<R:80> {<R:82> {<R:86> {<R:22> {<R:98> {<R:39> <T:111> } } } <T:69> <T:9> } } } <T:62> } } <T:67> } } <T:64> } } } } <T:64> } } } <T:-1> }
+{<R:0> {<R:1> <T:32> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> }<T:67> } {<R:3> {<R:5> <T:35> } {<R:7> <T:9> <T:111> <T:17> {<R:98> {<R:39> <T:111> {<R:100> <T:72> {<R:40> {<R:98> {<R:39> <T:111> } } } <T:71> } } } {<R:16> <T:63> {<R:18> {<R:4> {<R:5> <T:35> } } {<R:19> {<R:25> <T:111> {<R:42> <T:61> <T:62> } {<R:63> <T:63> {<R:64> {<R:67> {<R:82> {<R:81> <T:40> <T:61> {<R:80> {<R:82> {<R:86> {<R:22> {<R:98> {<R:39> <T:111> } } } <T:69> <T:9> } } } <T:62> } } <T:67> } } <T:64> } }} } <T:64> } } } <T:-1> }
+
+============== NUM ERRORS ==============
+length of source code string: 370
+antlr took 2.6e-10s and found 0 errors for 64 tokens
+javac took 6.8e-12s and found 0 errors for 45 tokens
 ```
 
 [MIT License](LICENSE).

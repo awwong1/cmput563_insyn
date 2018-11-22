@@ -3,16 +3,24 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[scripts]
+lint = "pylint insyn.py grammar/structure.py"
+
 [packages]
 "antlr4-python3-runtime" = "*"
 numpy = "*"
 nltk = "*"
 hmmlearn = "*"
 colorama = "*"
+networkx = "*"
+pydot = "*"
+javac-parser = "*"
 
 [dev-packages]
 pylint = "*"
 rope = "*"
+"pep8" = "*"
+"autopep8" = "*"
 
 [requires]
 python_version = "3.6"

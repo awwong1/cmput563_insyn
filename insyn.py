@@ -3,89 +3,14 @@
 University of Alberta, CMPUT 563 Fall 2018
 """
 
-import sqlite3
-from argparse import ArgumentParser
-from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
+import random
+import sys
+from argparse import ArgumentParser, SUPPRESS
 
-from grammar.JavaParser import JavaParser
-from grammar.JavaLexer import JavaLexer
-from grammar.JavaParserListener import JavaParserListener
+from analyze.db_handler import view_one_db_source
+from analyze.fixer import FixFinder
+from grammar.structure import StructureGenerator
 
-class KeyPrinter(JavaParserListener):
-    """
-    Tree stepper class for printing rules, hacked on from
-    https://www.antlr.org/api/Java/org/antlr/v4/runtime/tree/ParseTreeListener.html
-    """
-    OPEN_RULE = "{"
-    CLOSE_RULE = "}"
-    SPACER = "  "
-
-    def __init__(self, verbose, **kwargs):
-        self.verbose = verbose
-        self.literal_rule_stack = []
-        self.symbolic_rule_stack = []
-        super().__init__(**kwargs)
-
-    def enterEveryRule(self, ctx):
-        """override"""
-        self.symbolic_rule_stack.append(
-            self.OPEN_RULE + "<R:" + str(ctx.getRuleIndex()) + ">"
-        )
-        self.literal_rule_stack.append(
-            self.OPEN_RULE + "<R:" + type(ctx).__name__ + ">"
-        )
-
-    def exitEveryRule(self, ctx):
-        """override"""
-        self.symbolic_rule_stack.append(self.CLOSE_RULE)
-        self.literal_rule_stack.append(self.CLOSE_RULE)
-
-    def visitTerminal(self, node):
-        """override"""
-        self.symbolic_rule_stack.append("<T:" + str(node.symbol.type) + ">")
-        self.literal_rule_stack.append("<T:" + node.symbol.text + ">")
-
-    def show_sequence(self):
-        """Print out the rule stack"""
-        if self.verbose:
-            depth = 0
-            for text in self.literal_rule_stack:
-                if self.OPEN_RULE in text:
-                    print((self.SPACER * depth) + text)
-                    depth += 1
-                elif self.CLOSE_RULE in text:
-                    depth -= 1
-                    print((self.SPACER * depth) + text)
-                else:
-                    print((self.SPACER * depth) + text)
-        else:
-            print(" ".join(self.symbolic_rule_stack))
-
-def dummy_parse_example(offset=0, verbose=False):
-    """
-    Quick example of taking Java source code and outputting rules/tokens
-    """
-    conn = sqlite3.connect("data/java-sources-20170628.sqlite3")
-    cursor = conn.execute("SELECT * FROM source_file LIMIT 1 OFFSET (?)", (offset,))
-    row = cursor.fetchone()
-    conn.close()
-
-    source_code = row[1].decode("utf-8")
-    source_buf = InputStream(source_code)
-    lexer = JavaLexer(source_buf)
-    stream = CommonTokenStream(lexer)
-    parser = JavaParser(stream)
-    tree = parser.compilationUnit()
-
-    print("============== SOURCE CODE ==============")
-    print(source_code)
-    print()
-
-    print("============== PARSED CODE ==============")
-    printer = KeyPrinter(verbose)
-    walker = ParseTreeWalker()
-    walker.walk(printer, tree)
-    printer.show_sequence()
 
 def main():
     """INSYN script function. Currently only parses sources into grammar trees."""
@@ -97,20 +22,33 @@ def main():
         help="increase output verbosity", action="store_true"
     )
     parser.add_argument(
-        "-p", "--parse-example",
+        "-p", "--parse-db",
         help="example output sequence from sqlite3 db",
-        action="store_true"
+        default=SUPPRESS,
+        metavar="offset",
+        nargs='?',
+        action="store"
     )
     parser.add_argument(
-        "-o", "--db-offset",
-        help="in example, number of sqlite3 db rows to offset",
-        action="store",
-        default=0
+        "-g", "--generate-structure",
+        help="generate HHMM structure from grammar",
+        action="store_true"
+    ),
+    parser.add_argument(
+        "-f", "--fix",
+        help="if applicable list all possible one token fixes",
+        metavar="input.java",
+        nargs=1,
+        action="store"
     )
     args = parser.parse_args()
 
-    if args.parse_example:
-        dummy_parse_example(args.db_offset, args.verbose)
+    if hasattr(args, "parse_db"):
+        view_one_db_source(args.parse_db or 0, verbose=args.verbose)
+    elif args.generate_structure:
+        StructureGenerator(args.verbose)
+    elif args.fix:
+        FixFinder(args.fix[0])
     else:
         parser.print_help()
 
