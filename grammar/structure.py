@@ -14,7 +14,7 @@ class StructureGenerator():
     """
     parser = JavaParser(None)
 
-    def __init__(self, verbose):
+    def __init__(self, verbose=False):
         self.verbose = verbose
         self.rule_to_states = dict()
 

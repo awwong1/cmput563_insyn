@@ -4,10 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [scripts]
-lint = "pylint insyn.py grammar/structure.py"
+lint = "pylint insyn.py grammar/structure.py grammar/tree_helper.py analyze/db_handler.py analyze/fixer.py"
 
 [packages]
-"antlr4-python3-runtime" = "*"
+antlr4-python3-runtime = "*"
 numpy = "*"
 nltk = "*"
 hmmlearn = "*"
@@ -15,12 +15,13 @@ colorama = "*"
 networkx = "*"
 pydot = "*"
 javac-parser = "*"
+# kenlm = "*" # pip install https://github.com/kpu/kenlm/archive/a1fcd16228eaf95edd36c83db4cc6ba1d65ed9d4.zip
 
 [dev-packages]
 pylint = "*"
 rope = "*"
-"pep8" = "*"
-"autopep8" = "*"
+pep8 = "*"
+autopep8 = "*"
 
 [requires]
 python_version = "3.6"

@@ -43,7 +43,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         increase output verbosity
   -p [offset], --parse-db [offset]
-                        example output sequence from sqlite3 db
+                        example output sequence from train db
   -g, --generate-structure
                         generate HHMM structure from grammar
   -f input.java, --fix input.java

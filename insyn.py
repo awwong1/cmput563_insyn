@@ -2,13 +2,11 @@
 """INSYN: Reccomendation Models for Syntactically Incorrect Source Code
 University of Alberta, CMPUT 563 Fall 2018
 """
-
-import random
-import sys
+import logging
 from argparse import ArgumentParser, SUPPRESS
 
-from analyze.db_handler import view_one_db_source
-from analyze.fixer import FixFinder
+from analyze.db_runner import DatabaseRunner
+from analyze.parser import SourceCodeParser
 from grammar.structure import StructureGenerator
 
 
@@ -18,22 +16,11 @@ def main():
         description="Reccomendation Models for Syntactically Incorrect Source Code"
     )
     parser.add_argument(
-        "-v", "--verbose",
-        help="increase output verbosity", action="store_true"
+        "-l", "--log",
+        help="set logging verbosity",
+        metavar="level",
+        default="warning"
     )
-    parser.add_argument(
-        "-p", "--parse-db",
-        help="example output sequence from sqlite3 db",
-        default=SUPPRESS,
-        metavar="offset",
-        nargs='?',
-        action="store"
-    )
-    parser.add_argument(
-        "-g", "--generate-structure",
-        help="generate HHMM structure from grammar",
-        action="store_true"
-    ),
     parser.add_argument(
         "-f", "--fix",
         help="if applicable list all possible one token fixes",
@@ -41,16 +28,48 @@ def main():
         nargs=1,
         action="store"
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--sample-parse",
+        help="sample output sequence from training db",
+        default=SUPPRESS,
+        metavar="offset",
+        nargs='?',
+        type=int,
+        action="store"
+    )
+    parser.add_argument(
+        "--generate-structure",
+        help="generate HHMM structure from grammar",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--verify-training-data",
+        help="verify all training data parses",
+        action="store_true"
+    )
 
-    if hasattr(args, "parse_db"):
-        view_one_db_source(args.parse_db or 0, verbose=args.verbose)
+    args = parser.parse_args()
+    if args.log:
+        raw_log_level = str(args.log).upper()
+        if hasattr(logging, raw_log_level):
+            log_level = getattr(logging, raw_log_level)
+            logging.basicConfig(level=log_level)
+        else:
+            logging.warning("Invalid log level: {0}".format(args.log))
+    else:
+        logging.basicConfig()
+
+    if hasattr(args, "sample_parse"):
+        DatabaseRunner().view_one_db_source(args.sample_parse or 0)
     elif args.generate_structure:
-        StructureGenerator(args.verbose)
+        StructureGenerator()
     elif args.fix:
-        FixFinder(args.fix[0])
+        SourceCodeParser(args.fix[0])
+    elif args.verify_training_data:
+        DatabaseRunner().view_all_db_source()
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
