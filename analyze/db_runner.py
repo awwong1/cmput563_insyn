@@ -33,11 +33,9 @@ class DatabaseRunner:
                 (_, tokens) = SourceCodeParser.javac_analyze(source_code)
                 int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
                 if (-1) in int_tokens:
-                    print(file_hash)
-                    print(int_tokens)
-                    print(tokens)
-                    raise UserWarning(tokens[list(int_tokens).index(-1)])
-                print(" ".join(map(lambda itos: str(itos), int_tokens)))
+                    logging.error("{filehash} contains error".format(filehash=file_hash))
+                else:
+                    print(" ".join(map(lambda itos: str(itos), int_tokens)))
             results = cursor.fetchmany()
         conn.close()
 
