@@ -18,6 +18,23 @@ class DatabaseRunner:
         if not os.path.isfile(self.db_path):
             raise FileNotFoundError("Missing {0}".format(self.db_path))
 
+    def tokenize_all_db_source(self):
+        """
+        Tokenize all source files, output to standard out (for training ngram)
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT source FROM source_file")
+        results = cursor.fetchmany()
+        while results:
+            for (raw_source_code,) in results:
+                source_code = raw_source_code.decode("utf-8")
+                (_, tokens) = SourceCodeParser.javac_analyze(source_code)
+                int_tokens = SourceCodeParser.tokens_to_ints(tokens)
+                print(" ".join(map(lambda itos: str(itos), int_tokens)))
+            results = cursor.fetchmany()
+        conn.close()
+
     def view_all_db_source(self):
         """
         Validate dataset parses correctly.

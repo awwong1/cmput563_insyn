@@ -8,7 +8,7 @@ from argparse import ArgumentParser, SUPPRESS
 from analyze.db_runner import DatabaseRunner
 from analyze.parser import SourceCodeParser
 from grammar.structure import StructureGenerator
-
+from model.ngram import NGram
 
 def main():
     """INSYN script function. Currently only parses sources into grammar trees."""
@@ -43,8 +43,13 @@ def main():
         action="store_true"
     )
     parser.add_argument(
-        "--verify-training-data",
-        help="verify all training data parses",
+        "--tokenize-training-data",
+        help="tokenize all training data",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--prob-test",
+        help="work in progress tool > probabilities",
         action="store_true"
     )
 
@@ -65,8 +70,10 @@ def main():
         StructureGenerator()
     elif args.fix:
         SourceCodeParser(args.fix[0])
-    elif args.verify_training_data:
-        DatabaseRunner().view_all_db_source()
+    elif args.tokenize_training_data:
+        DatabaseRunner().tokenize_all_db_source()
+    elif args.prob_test:
+        NGram()
     else:
         parser.print_help()
 
