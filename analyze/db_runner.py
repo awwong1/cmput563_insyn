@@ -25,8 +25,12 @@ class DatabaseRunner:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(hash) FROM source_file")
+        num_rows = cursor.fetchone()[0]
         cursor.execute("SELECT hash, source FROM source_file")
         results = cursor.fetchmany()
+        counter = 0
+        start_time = time.time()
         while results:
             for (file_hash, raw_source_code) in results:
                 try:
@@ -34,11 +38,25 @@ class DatabaseRunner:
                     (_, tokens) = SourceCodeParser.javac_analyze(source_code)
                     int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
                     if (-1) in int_tokens:
-                        logging.error("{filehash} contains token error".format(filehash=file_hash))
+                        logging.error(
+                            "{filehash} contains token error".format(filehash=file_hash))
                     else:
                         print(" ".join(map(lambda itos: str(itos), int_tokens)))
-                except:
-                    logging.error("{filehash} threw general exception".format(filehash=file_hash))
+                except Exception as e:
+                    logging.error("{filehash} threw {err}".format(
+                        filehash=file_hash, err=str(e)))
+                if not counter % 1000:
+                    elapsed_time = time.time() - start_time
+                    logging.error(
+                        "{counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
+                            counter=counter,
+                            c_width=len(str(num_rows)),
+                            total=num_rows,
+                            progress=counter/num_rows,
+                            seconds=(elapsed_time)
+                        )
+                    )
+                counter += 1
             results = cursor.fetchmany()
         conn.close()
 
