@@ -11,7 +11,8 @@ from analyze.parser import SourceCodeParser
 
 class DatabaseRunner:
     logger = logging.getLogger(__name__)
-    db_path = os.path.join("data", "java-sources-20170628.sqlite3")
+    db_path = os.path.join(os.path.dirname(__file__),
+                           "..", "data", "java-sources-20170628.sqlite3")
 
     def __init__(self, verbose=True):
         self.verbose = verbose
@@ -24,13 +25,18 @@ class DatabaseRunner:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT source FROM source_file")
+        cursor.execute("SELECT hash, source FROM source_file")
         results = cursor.fetchmany()
         while results:
-            for (raw_source_code,) in results:
+            for (file_hash, raw_source_code) in results:
                 source_code = raw_source_code.decode("utf-8")
                 (_, tokens) = SourceCodeParser.javac_analyze(source_code)
-                int_tokens = SourceCodeParser.tokens_to_ints(tokens)
+                int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
+                if (-1) in int_tokens:
+                    print(file_hash)
+                    print(int_tokens)
+                    print(tokens)
+                    raise UserWarning(tokens[list(int_tokens).index(-1)])
                 print(" ".join(map(lambda itos: str(itos), int_tokens)))
             results = cursor.fetchmany()
         conn.close()

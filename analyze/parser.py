@@ -122,7 +122,7 @@ class SourceCodeParser:
         "LTLTEQ": 109,  # LTLTEQ("<<="),
         "GTGTEQ": 110,  # GTGTEQ(">>="),
         "GTGTGTEQ": 111,  # GTGTGTEQ(">>>="),
-        "MONKEYS": 112,  # MONKEYS_AT("@"),
+        "MONKEYS_AT": 112,  # MONKEYS_AT("@"),
         "CUSTOM": 113,  # CUSTOM;
     }
 
