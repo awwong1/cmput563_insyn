@@ -29,13 +29,16 @@ class DatabaseRunner:
         results = cursor.fetchmany()
         while results:
             for (file_hash, raw_source_code) in results:
-                source_code = raw_source_code.decode("utf-8")
-                (_, tokens) = SourceCodeParser.javac_analyze(source_code)
-                int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
-                if (-1) in int_tokens:
-                    logging.error("{filehash} contains error".format(filehash=file_hash))
-                else:
-                    print(" ".join(map(lambda itos: str(itos), int_tokens)))
+                try:
+                    source_code = raw_source_code.decode("utf-8")
+                    (_, tokens) = SourceCodeParser.javac_analyze(source_code)
+                    int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
+                    if (-1) in int_tokens:
+                        logging.error("{filehash} contains token error".format(filehash=file_hash))
+                    else:
+                        print(" ".join(map(lambda itos: str(itos), int_tokens)))
+                except:
+                    logging.error("{filehash} threw general exception".format(filehash=file_hash))
             results = cursor.fetchmany()
         conn.close()
 
