@@ -126,13 +126,8 @@ class SourceCodeParser:
         "CUSTOM": 113,  # CUSTOM;
     }
 
-    javac = Java()
-
-    def __init__(self, filename):
-        try:
-            self.source_file = open(filename, "r")
-        except FileNotFoundError as err:
-            print(err)
+    def __init__(self):
+        self.javac = Java()
 
     @staticmethod
     def tokens_to_ints(tuple_tokens):
@@ -160,10 +155,9 @@ class SourceCodeParser:
 
         return (num_errors, antlr_tokens, tree)
 
-    @staticmethod
-    def javac_analyze(source_code):
-        num_errors = SourceCodeParser.javac.get_num_parse_errors(source_code)
-        token_sequence = SourceCodeParser.javac.lex(source_code)
-        # print(SourceCodeParser.javac.check_syntax(source_code))
+    def javac_analyze(self, source_code):
+        num_errors = self.javac.get_num_parse_errors(source_code)
+        token_sequence = self.javac.lex(source_code)
+        # print(self.javac.check_syntax(source_code))
 
         return (num_errors, token_sequence)

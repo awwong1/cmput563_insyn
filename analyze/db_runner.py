@@ -5,9 +5,11 @@ import os.path
 import sqlite3
 import sys
 import time
+from multiprocessing import Pool, cpu_count, current_process
 
 from analyze.parser import SourceCodeParser
 
+async_parsers = dict()  # holds the javac stuff per process maybe
 
 class DatabaseRunner:
     logger = logging.getLogger(__name__)
@@ -19,6 +21,30 @@ class DatabaseRunner:
         if not os.path.isfile(self.db_path):
             raise FileNotFoundError("Missing {0}".format(self.db_path))
 
+    @staticmethod
+    def _javac_init():
+        # big old hack for getting stateful processes with javac py4j nonsense
+        global sc_parser
+        sc_parser = SourceCodeParser()
+
+    @staticmethod
+    def _tokenize_sql_row_result(row_result):
+        # logging.error("proc: {name}".format(name=current_process().name))
+        # needs the sc_parser global that was initialized
+        (file_hash, raw_source_code) = row_result
+        try:
+            source_code = raw_source_code.decode("utf-8")
+            (_, tokens) = sc_parser.javac_analyze(source_code)
+            int_tokens = list(sc_parser.tokens_to_ints(tokens))
+            if (-1) in int_tokens:
+                logging.error(
+                    "{filehash} contains token error".format(filehash=file_hash))
+            else:
+                return " ".join(map(lambda itos: str(itos), int_tokens))
+        except Exception as e:
+            logging.error("{filehash} threw {err}".format(
+                filehash=file_hash, err=str(e)))
+
     def tokenize_all_db_source(self):
         """
         Tokenize all source files, output to standard out (for training ngram)
@@ -28,27 +54,17 @@ class DatabaseRunner:
         cursor.execute("SELECT COUNT(hash) FROM source_file")
         num_rows = cursor.fetchone()[0]
         cursor.execute("SELECT hash, source FROM source_file")
-        results = cursor.fetchmany()
+        row_results = cursor.fetchmany()
         counter = 0
         start_time = time.time()
-        while results:
-            for (file_hash, raw_source_code) in results:
-                try:
-                    source_code = raw_source_code.decode("utf-8")
-                    (_, tokens) = SourceCodeParser.javac_analyze(source_code)
-                    int_tokens = list(SourceCodeParser.tokens_to_ints(tokens))
-                    if (-1) in int_tokens:
-                        logging.error(
-                            "{filehash} contains token error".format(filehash=file_hash))
-                    else:
-                        print(" ".join(map(lambda itos: str(itos), int_tokens)))
-                except Exception as e:
-                    logging.error("{filehash} threw {err}".format(
-                        filehash=file_hash, err=str(e)))
+        all_sql_results = []
+        while row_results:
+            for row_result in row_results:
+                all_sql_results.append(row_result)
                 if not counter % 1000:
                     elapsed_time = time.time() - start_time
                     logging.error(
-                        "{counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
+                        "\rSQL READ: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
                             counter=counter,
                             c_width=len(str(num_rows)),
                             total=num_rows,
@@ -57,8 +73,27 @@ class DatabaseRunner:
                         )
                     )
                 counter += 1
-            results = cursor.fetchmany()
+            row_results = cursor.fetchmany()
         conn.close()
+
+        num_rows = len(all_sql_results)
+        counter = 0
+        with Pool(processes=cpu_count(), initializer=DatabaseRunner._javac_init) as pool:
+            for str_tokens in pool.imap(DatabaseRunner._tokenize_sql_row_result, all_sql_results):
+                if not counter % 100:
+                    elapsed_time = time.time() - start_time
+                    logging.error(
+                        "\rTOKENIZE: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
+                            counter=counter,
+                            c_width=len(str(num_rows)),
+                            total=num_rows,
+                            progress=counter/num_rows,
+                            seconds=(elapsed_time)
+                        )
+                    )
+                counter += 1
+                if str_tokens:
+                    print(str_tokens)
 
     def view_all_db_source(self):
         """
@@ -74,10 +109,11 @@ class DatabaseRunner:
 
         counter = 0
         start_time = time.time()
+        sc_parser = SourceCodeParser()
         while results:  # and counter < 1000:
             for (file_hash, raw_source_code) in results:
                 source_code = raw_source_code.decode("utf-8")
-                (javac_num_errs, javac_tokens) = SourceCodeParser.javac_analyze(
+                (javac_num_errs, javac_tokens) = sc_parser.javac_analyze(
                     source_code)
                 if javac_num_errs:
                     self.logger.warning(
@@ -117,9 +153,9 @@ class DatabaseRunner:
         print()
 
         # analyze db code
-        (javac_num_err, javac_tokens,) = SourceCodeParser.javac_analyze(source_code)
-        (antlr_num_err, antlr_tokens,
-         tree) = SourceCodeParser.antlr_analyze(source_code)
+        sc_parser = SourceCodeParser()
+        (javac_num_err, javac_tokens,) = sc_parser.javac_analyze(source_code)
+        (antlr_num_err, antlr_tokens, tree) = sc_parser.antlr_analyze(source_code)
 
         if self.verbose:
             print("============== META/TOKENS ==============")

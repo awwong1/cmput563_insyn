@@ -69,7 +69,8 @@ def main():
     elif args.generate_structure:
         StructureGenerator()
     elif args.fix:
-        SourceCodeParser(args.fix[0])
+        # SourceCodeParser(args.fix[0])
+        print("todo")
     elif args.tokenize_training_data:
         DatabaseRunner().tokenize_all_db_source()
     elif args.prob_test:
