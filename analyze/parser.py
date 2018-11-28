@@ -10,7 +10,7 @@ from grammar.tree_helper import CountedDefaultErrorStrategy, ParseTreeStepper
 class SourceCodeParser:
     # from javac TokenKind enum
     JAVA_TOKEN_TYPE_MAP = {
-        "ERROR": -1,  # ERROR,
+        # "ERROR": -1,  # ERROR,
         "EOF": 1,  # EOF,
         "IDENTIFIER": 2,  # IDENTIFIER(Tokens.Token.Tag.NAMED),
         "ABSTRACT": 3,  # ABSTRACT("abstract"),

@@ -7,8 +7,9 @@ from argparse import ArgumentParser, SUPPRESS
 
 from analyze.db_runner import DatabaseRunner
 from analyze.parser import SourceCodeParser
+from analyze.ngram_tester import NGramTester
 from grammar.structure import StructureGenerator
-from model.ngram import NGram
+
 
 def main():
     """INSYN script function. Currently only parses sources into grammar trees."""
@@ -22,10 +23,9 @@ def main():
         default="warning"
     )
     parser.add_argument(
-        "-f", "--fix",
-        help="if applicable list all possible one token fixes",
-        metavar="input.java",
-        nargs=1,
+        "--test-ngram-model",
+        help="read java code, random token change, list model suggestions",
+        metavar="file|dir",
         action="store"
     )
     parser.add_argument(
@@ -47,11 +47,6 @@ def main():
         help="tokenize all training data",
         action="store_true"
     )
-    parser.add_argument(
-        "--prob-test",
-        help="work in progress tool > probabilities",
-        action="store_true"
-    )
 
     args = parser.parse_args()
     if args.log:
@@ -66,15 +61,12 @@ def main():
 
     if hasattr(args, "sample_parse"):
         DatabaseRunner().view_one_db_source(args.sample_parse or 0)
+    elif args.test_ngram_model:
+        NGramTester(args.test_ngram_model)
     elif args.generate_structure:
         StructureGenerator()
-    elif args.fix:
-        # SourceCodeParser(args.fix[0])
-        print("todo")
     elif args.tokenize_training_data:
         DatabaseRunner().tokenize_all_db_source()
-    elif args.prob_test:
-        print("todo")
     else:
         parser.print_help()
 

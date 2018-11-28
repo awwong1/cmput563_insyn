@@ -43,14 +43,14 @@ class DatabaseRunner:
             int_tokens = list(sc_parser.tokens_to_ints(tokens))
             if (-1) in int_tokens:
                 joined_token_error = ", ".join(map(lambda s: str(s), tokens[int_tokens.index(-1)]))
-                logging.error(
+                DatabaseRunner.logger.error(
                     "{filehash} contains token error: {token_error}".format(
                         filehash=file_hash, token_error=joined_token_error))
             else:
                 #return " ".join(map(lambda itos: str(itos), int_tokens))
                 return " ".join(map(lambda tup: str(tup[0]), tokens))
         except Exception as e:
-            logging.error("{filehash} threw {err}".format(
+            DatabaseRunner.logger.error("{filehash} threw {err}".format(
                 filehash=file_hash, err=str(e)))
 
     def tokenize_all_db_source(self):
@@ -72,7 +72,7 @@ class DatabaseRunner:
                 all_sql_results.append(row_result)
                 if not counter % 2500:
                     elapsed_time = time.time() - start_time
-                    logging.error(
+                    DatabaseRunner.logger.error(
                         "\rSQL READ: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
                             counter=counter,
                             c_width=len(str(num_rows)),
@@ -92,7 +92,7 @@ class DatabaseRunner:
                     for str_tokens in pool.imap(DatabaseRunner._tokenize_sql_row_result, all_sql_results):
                         if not tokenize_counter % 250:
                             elapsed_time = time.time() - start_time
-                            logging.error(
+                            DatabaseRunner.logger.error(
                                 "\r    TOKENIZE: {counter:0{c_width}d}/{total} of batch {sql_counter}/{sql_total_rows}; {seconds:.1f}s elapsed\r".format(
                                     counter=tokenize_counter,
                                     c_width=len(str(tokenize_num_rows)),
