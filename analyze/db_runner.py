@@ -6,10 +6,10 @@ import sqlite3
 import sys
 import time
 from multiprocessing import Pool, cpu_count, current_process
+from model.ngram import NGram
 
 from analyze.parser import SourceCodeParser
 
-async_parsers = dict()  # holds the javac stuff per process maybe
 
 class DatabaseRunner:
     logger = logging.getLogger(__name__)
@@ -23,31 +23,40 @@ class DatabaseRunner:
 
     @staticmethod
     def _javac_init():
-        # big old hack for getting stateful processes with javac py4j nonsense
+        """
+        Called by pool initializer in tokenize_all_db_source.
+        Setup SourceCodeParser javac instance (py4j JavaGateway binding)
+        """
         global sc_parser
         sc_parser = SourceCodeParser()
 
     @staticmethod
     def _tokenize_sql_row_result(row_result):
-        # logging.error("proc: {name}".format(name=current_process().name))
-        # needs the sc_parser global that was initialized
+        """
+        Called within pool imap for tokenizing sqlite database source code.
+        Returns a string of token ids seperated by spaces or logs an error to stderr.
+        """
         (file_hash, raw_source_code) = row_result
         try:
             source_code = raw_source_code.decode("utf-8")
             (_, tokens) = sc_parser.javac_analyze(source_code)
             int_tokens = list(sc_parser.tokens_to_ints(tokens))
             if (-1) in int_tokens:
+                joined_token_error = ", ".join(map(lambda s: str(s), tokens[int_tokens.index(-1)]))
                 logging.error(
-                    "{filehash} contains token error".format(filehash=file_hash))
+                    "{filehash} contains token error: {token_error}".format(
+                        filehash=file_hash, token_error=joined_token_error))
             else:
-                return " ".join(map(lambda itos: str(itos), int_tokens))
+                #return " ".join(map(lambda itos: str(itos), int_tokens))
+                return " ".join(map(lambda tup: str(tup[0]), tokens))
         except Exception as e:
             logging.error("{filehash} threw {err}".format(
                 filehash=file_hash, err=str(e)))
 
     def tokenize_all_db_source(self):
         """
-        Tokenize all source files, output to standard out (for training ngram)
+        Tokenize all source files, output to stdout (for training ngram)
+        Uses stderr for printing progress messages and errors.
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -75,7 +84,7 @@ class DatabaseRunner:
                 counter += 1
             row_results = cursor.fetchmany()
 
-            # kludge tokenization every 100k rows read
+            # tokenization every number of rows to reduce memory usage
             tokenize_num_rows = len(all_sql_results)
             if tokenize_num_rows > 10000 or not row_results:
                 tokenize_counter = 0
@@ -98,47 +107,6 @@ class DatabaseRunner:
                         if str_tokens:
                             print(str_tokens)
                 all_sql_results = []
-        conn.close()
-
-    def view_all_db_source(self):
-        """
-        Validate dataset parses correctly.
-        """
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(hash) FROM source_file")
-        num_rows = cursor.fetchone()[0]
-        # get all source file training data
-        cursor.execute("SELECT hash, source FROM source_file")
-        results = cursor.fetchmany()
-
-        counter = 0
-        start_time = time.time()
-        sc_parser = SourceCodeParser()
-        while results:  # and counter < 1000:
-            for (file_hash, raw_source_code) in results:
-                source_code = raw_source_code.decode("utf-8")
-                (javac_num_errs, javac_tokens) = sc_parser.javac_analyze(
-                    source_code)
-                if javac_num_errs:
-                    self.logger.warning(
-                        "{0} javac found {1} errors in {2} tokens".format(
-                            file_hash, javac_num_errs, len(javac_tokens))
-                    )
-                elapsed_time = time.time() - start_time
-                if self.verbose:
-                    self.logger.info(
-                        "{counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
-                            counter=counter,
-                            c_width=len(str(num_rows)),
-                            total=num_rows,
-                            progress=counter/num_rows,
-                            seconds=(elapsed_time)
-                        )
-                    )
-                counter += 1
-            results = cursor.fetchmany()
-        print("\nFinished!".format())
         conn.close()
 
     def view_one_db_source(self, offset=0):

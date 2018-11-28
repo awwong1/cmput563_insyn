@@ -74,7 +74,7 @@ def main():
     elif args.tokenize_training_data:
         DatabaseRunner().tokenize_all_db_source()
     elif args.prob_test:
-        NGram()
+        print("todo")
     else:
         parser.print_help()
 

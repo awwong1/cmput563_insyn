@@ -127,7 +127,7 @@ class SourceCodeParser:
     }
 
     def __init__(self):
-        self.javac = Java()
+        self.javac = Java() # each thread must have its own instance of Javac
 
     @staticmethod
     def tokens_to_ints(tuple_tokens):
