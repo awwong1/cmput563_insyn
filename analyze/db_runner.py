@@ -61,7 +61,7 @@ class DatabaseRunner:
         while row_results:
             for row_result in row_results:
                 all_sql_results.append(row_result)
-                if not counter % 1000:
+                if not counter % 2500:
                     elapsed_time = time.time() - start_time
                     logging.error(
                         "\rSQL READ: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
@@ -74,26 +74,31 @@ class DatabaseRunner:
                     )
                 counter += 1
             row_results = cursor.fetchmany()
-        conn.close()
 
-        num_rows = len(all_sql_results)
-        counter = 0
-        with Pool(processes=cpu_count(), initializer=DatabaseRunner._javac_init) as pool:
-            for str_tokens in pool.imap(DatabaseRunner._tokenize_sql_row_result, all_sql_results):
-                if not counter % 100:
-                    elapsed_time = time.time() - start_time
-                    logging.error(
-                        "\rTOKENIZE: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
-                            counter=counter,
-                            c_width=len(str(num_rows)),
-                            total=num_rows,
-                            progress=counter/num_rows,
-                            seconds=(elapsed_time)
-                        )
-                    )
-                counter += 1
-                if str_tokens:
-                    print(str_tokens)
+            # kludge tokenization every 100k rows read
+            tokenize_num_rows = len(all_sql_results)
+            if tokenize_num_rows > 10000 or not row_results:
+                tokenize_counter = 0
+                with Pool(processes=cpu_count(), initializer=DatabaseRunner._javac_init) as pool:
+                    for str_tokens in pool.imap(DatabaseRunner._tokenize_sql_row_result, all_sql_results):
+                        if not tokenize_counter % 250:
+                            elapsed_time = time.time() - start_time
+                            logging.error(
+                                "\r    TOKENIZE: {counter:0{c_width}d}/{total} of batch {sql_counter}/{sql_total_rows}; {seconds:.1f}s elapsed\r".format(
+                                    counter=tokenize_counter,
+                                    c_width=len(str(tokenize_num_rows)),
+                                    total=tokenize_num_rows,
+                                    progress=tokenize_counter/tokenize_num_rows,
+                                    seconds=(elapsed_time),
+                                    sql_counter=counter,
+                                    sql_total_rows=num_rows
+                                )
+                            )
+                        tokenize_counter += 1
+                        if str_tokens:
+                            print(str_tokens)
+                all_sql_results = []
+        conn.close()
 
     def view_all_db_source(self):
         """
