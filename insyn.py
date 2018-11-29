@@ -5,7 +5,7 @@ University of Alberta, CMPUT 563 Fall 2018
 import logging
 from argparse import ArgumentParser, SUPPRESS
 
-from analyze.db_runner import DatabaseRunner
+from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from grammar.structure import StructureGenerator
@@ -24,7 +24,7 @@ def main():
     )
     parser.add_argument(
         "--test-ngram-model",
-        help="read java code, random token change, list model suggestions",
+        help="read java code, change random token, list suggestions",
         metavar="file|dir",
         action="store"
     )
@@ -60,13 +60,13 @@ def main():
         logging.basicConfig()
 
     if hasattr(args, "sample_parse"):
-        DatabaseRunner().view_one_db_source(args.sample_parse or 0)
+        DBRunner().view_one_db_source(args.sample_parse or 0)
     elif args.test_ngram_model:
-        NGramTester(args.test_ngram_model)
+        NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         StructureGenerator()
     elif args.tokenize_training_data:
-        DatabaseRunner().tokenize_all_db_source()
+        DBRunner().tokenize_all_db_source()
     else:
         parser.print_help()
 

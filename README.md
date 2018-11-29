@@ -32,48 +32,43 @@ $ sqlite3 -version
     - `pipenv install`
     - `pipenv shell`
 3. Run `./insyn.py`
+4. If using 10-gram model, follow instructions in `./model` (see [`./model/README.md`](model/README.md))
 
 ```bash
 $ ./insyn.py 
-usage: insyn.py [-h] [-v] [-p [offset]] [-g] [-f input.java]
+usage: insyn.py [-h] [-l level] [--test-ngram-model file|dir]
+                [--sample-parse [offset]] [--generate-structure]
+                [--tokenize-training-data]
 
 Reccomendation Models for Syntactically Incorrect Source Code
 
 optional arguments:
   -h, --help            show this help message and exit
-  -v, --verbose         increase output verbosity
-  -p [offset], --parse-db [offset]
-                        example output sequence from train db
-  -g, --generate-structure
-                        generate HHMM structure from grammar
-  -f input.java, --fix input.java
+  -l level, --log level
+                        set logging verbosity
+  --test-ngram-model file|dir
+                        read java code, change random token, list suggestions
+  --sample-parse [offset]
+                        sample output sequence from training db
+  --generate-structure  generate HHMM structure from grammar
+  --tokenize-training-data
+                        tokenize all training data
 ```
 
+Example ngram validation on one file (also handles directories, does recursive walk for all `*.java` files)
+
 ```bash
-$ ./insyn.py --parse-db
-
-============== ANTLR TREE ==============
-package com.cl.interpolatordebugger;
-
-import android.app.Application;
-import android.test.ApplicationTestCase;
-
-/**
- * <a href="http://d.android.com/tools/testing/testing_android.html">Testing Fundamentals</a>
- */
-public class ApplicationTest extends ApplicationTestCase<Application> {
-    public ApplicationTest() {
-        super(Application.class);
-    }
-}
-
-============== PARSED CODE ==============
-{<R:0> {<R:1> <T:32> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> } <T:67> } {<R:2> <T:25> {<R:46> <T:111> <T:69> <T:111> <T:69> <T:111> }<T:67> } {<R:3> {<R:5> <T:35> } {<R:7> <T:9> <T:111> <T:17> {<R:98> {<R:39> <T:111> {<R:100> <T:72> {<R:40> {<R:98> {<R:39> <T:111> } } } <T:71> } } } {<R:16> <T:63> {<R:18> {<R:4> {<R:5> <T:35> } } {<R:19> {<R:25> <T:111> {<R:42> <T:61> <T:62> } {<R:63> <T:63> {<R:64> {<R:67> {<R:82> {<R:81> <T:40> <T:61> {<R:80> {<R:82> {<R:86> {<R:22> {<R:98> {<R:39> <T:111> } } } <T:69> <T:9> } } } <T:62> } } <T:67> } } <T:64> } }} } <T:64> } } } <T:-1> }
-
-============== NUM ERRORS ==============
-length of source code string: 370
-antlr took 2.6e-10s and found 0 errors for 64 tokens
-javac took 6.8e-12s and found 0 errors for 45 tokens
+$ ./insyn.py --log info --test-ngram-model example/HelloWorld.java
+INFO:analyze.ngram_tester:example/HelloWorld.java: BREAK by ADD LT at 22
+INFO:analyze.ngram_tester:example/HelloWorld.java: CHECKING_LOCATION 17 (-3.151554584503174)
+INFO:analyze.ngram_tester:example/HelloWorld.java: CHECKING_LOCATION 26 (-2.4582955837249756)
+INFO:analyze.ngram_tester:example/HelloWorld.java: CHECKING_LOCATION 0 (-2.2994213104248047)
+INFO:analyze.ngram_tester:example/HelloWorld.java: CHECKING_LOCATION 24 (-1.8517078161239624)
+INFO:analyze.ngram_tester:example/HelloWorld.java: CHECKING_LOCATION 22 (-1.6897526979446411)
+INFO:analyze.ngram_tester:example/HelloWorld.java: SUGGEST_FIX_SCORE -12.189971923828125 (DEL LT at 22)
+INFO:analyze.ngram_tester:example/HelloWorld.java: TRUE_FIX_FOUND rank: 0
+example/HelloWorld.java: ADD LT at 22; True fix found rank 0
+Found 1/1 true fixes (avg_rank=0.0)
 ```
 
 [MIT License](LICENSE).

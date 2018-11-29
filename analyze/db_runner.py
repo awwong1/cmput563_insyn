@@ -5,13 +5,13 @@ import os.path
 import sqlite3
 import sys
 import time
-from multiprocessing import Pool, cpu_count, current_process
-from model.ngram import NGram
+from multiprocessing import Pool
+from model.ngram import KenLM10Gram
 
 from analyze.parser import SourceCodeParser
 
 
-class DatabaseRunner:
+class DBRunner:
     logger = logging.getLogger(__name__)
     db_path = os.path.join(os.path.dirname(__file__),
                            "..", "data", "java-sources-20170628.sqlite3")
@@ -43,14 +43,14 @@ class DatabaseRunner:
             int_tokens = list(sc_parser.tokens_to_ints(tokens))
             if (-1) in int_tokens:
                 joined_token_error = ", ".join(map(lambda s: str(s), tokens[int_tokens.index(-1)]))
-                DatabaseRunner.logger.error(
+                DBRunner.logger.error(
                     "{filehash} contains token error: {token_error}".format(
                         filehash=file_hash, token_error=joined_token_error))
             else:
                 #return " ".join(map(lambda itos: str(itos), int_tokens))
                 return " ".join(map(lambda tup: str(tup[0]), tokens))
         except Exception as e:
-            DatabaseRunner.logger.error("{filehash} threw {err}".format(
+            DBRunner.logger.error("{filehash} threw {err}".format(
                 filehash=file_hash, err=str(e)))
 
     def tokenize_all_db_source(self):
@@ -72,7 +72,7 @@ class DatabaseRunner:
                 all_sql_results.append(row_result)
                 if not counter % 2500:
                     elapsed_time = time.time() - start_time
-                    DatabaseRunner.logger.error(
+                    DBRunner.logger.error(
                         "\rSQL READ: {counter:0{c_width}d}/{total} ({progress:.2%}) {seconds:.1f}s elapsed\r".format(
                             counter=counter,
                             c_width=len(str(num_rows)),
@@ -88,11 +88,11 @@ class DatabaseRunner:
             tokenize_num_rows = len(all_sql_results)
             if tokenize_num_rows > 10000 or not row_results:
                 tokenize_counter = 0
-                with Pool(processes=cpu_count(), initializer=DatabaseRunner._javac_init) as pool:
-                    for str_tokens in pool.imap(DatabaseRunner._tokenize_sql_row_result, all_sql_results):
+                with Pool(initializer=DBRunner._javac_init) as pool:
+                    for str_tokens in pool.imap(DBRunner._tokenize_sql_row_result, all_sql_results):
                         if not tokenize_counter % 250:
                             elapsed_time = time.time() - start_time
-                            DatabaseRunner.logger.error(
+                            DBRunner.logger.error(
                                 "\r    TOKENIZE: {counter:0{c_width}d}/{total} of batch {sql_counter}/{sql_total_rows}; {seconds:.1f}s elapsed\r".format(
                                     counter=tokenize_counter,
                                     c_width=len(str(tokenize_num_rows)),

@@ -2,7 +2,7 @@ import kenlm
 import os.path
 
 
-class NGram:
+class KenLM10Gram:
     """
     10-gram model trained on java source code sqlite db.
     Uses token type names.
@@ -11,9 +11,13 @@ class NGram:
         __file__), "java-tokenstr-10grams.arpa")
 
     def __init__(self):
-        if not os.path.isfile(self.ngram_path):
+        # check for .arpa.bin, then .arpa, else fail
+        if os.path.isfile(self.ngram_path + ".bin"):
+            self.model = kenlm.Model(self.ngram_path + ".bin")
+        elif os.path.isfile(self.ngram_path):
+            self.model = kenlm.Model(self.ngram_path)
+        else:
             raise FileNotFoundError("Missing {0}".format(self.ngram_path))
-        self.model = kenlm.Model(self.ngram_path)
 
     def score(self, token_sequence):
         return self.model.score(token_sequence)

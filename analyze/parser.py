@@ -158,6 +158,7 @@ class SourceCodeParser:
     def javac_analyze(self, source_code):
         num_errors = self.javac.get_num_parse_errors(source_code)
         token_sequence = self.javac.lex(source_code)
-        # print(self.javac.check_syntax(source_code))
-
         return (num_errors, token_sequence)
+    
+    def javac_check_syntax(self, source_code):
+        return self.javac.check_syntax(source_code)
