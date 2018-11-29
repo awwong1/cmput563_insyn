@@ -72,6 +72,8 @@ def init_vertial_transitions():
 
 
 # Horizontal Transitions
+# Here, we assume all hidden states have a directed edge to all other nodes in current subtree/level
+# TODO: prune these results to enforce grammar rules
 def init_horizontal_transitions(PI):
     A = np.zeros((depth - 1, width, width))
     for i in range(len(allX)):
@@ -88,8 +90,10 @@ def init_horizontal_transitions(PI):
 
 
 # Emissions
+# Here, we assume each production state can emit all possible tokens
+# TODO: prune these results to enforce grammar rules
 def init_emissions():
-    B = np.zeros((width, depth, width - 1))
+    B = np.zeros((len(alphabet), depth, width - 1))
     for i in range(len(prodX)):
         r = np.ones((len(alphabet))) + (np.random.random_sample(len(alphabet)) - 0.5) / 5
         if not IS_RANDOM:
