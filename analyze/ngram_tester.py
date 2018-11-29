@@ -16,7 +16,7 @@ class NGramTester:
     ngram = KenLM10Gram()  # thread safe?
     pattern = "*.java"
     all_token_types = list(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
-    try_num_locations = 5  # How many locations do we try?
+    try_num_locations = 10  # How many locations do we try?
     num_suggestions = 1000  # How many suggestions do we reveal?
 
     @staticmethod
@@ -185,7 +185,7 @@ class NGramTester:
         )
 
         # What was the break; Was true fix suggested and if so what rank?
-        rank = 0
+        rank = 1
         for (score, action, idx, fix_token) in fix_prob[:NGramTester.num_suggestions]:
             NGramTester.logger.info(
                 "{path}: SUGGEST_FIX_SCORE {score} ({action} {token} at {idx})".format(
@@ -210,10 +210,19 @@ class NGramTester:
                     "{path}: TRUE_FIX_FOUND rank: {rank}".format(path=source_path, rank=rank))
                 break
             rank += 1
-        if rank < NGramTester.num_suggestions:
+        if rank <= NGramTester.num_suggestions:
             return source_path, eval_str + "; True fix found rank {}".format(rank), True, rank
         else:
             return source_path, eval_str + "; True fix not found, over rank {}".format(NGramTester.num_suggestions), False, rank
+
+    @staticmethod
+    def _mean_reciprocal_rank(ranks):
+        """
+        Take all ranks, calculate meanreciprocal rank.
+        Ranks are integers ranging from 1 to {num_suggestions}
+        """
+        reciprocal_ranks = map(lambda x: 1/x, ranks)
+        return sum(reciprocal_ranks)/len(ranks)
 
     def __init__(self, input_file_path):
         """
@@ -256,12 +265,14 @@ class NGramTester:
         self._pre_evaluation()
 
         evaluation_counter = 0
-        fix_ranks = []  # if true fix found, what was the rank?
+        found_fix_counter = 0
+        all_ranks = []  # if true fix found, what was the rank?
         with Pool() as pool:
             for (source_path, evaluation, found_fix, rank) in pool.imap(NGramTester._break_and_eval, self.file_to_tokens.items()):
                 NGramTester.logger.info("{}: {}".format(source_path, evaluation))
                 evaluation_counter += 1
+                all_ranks.append(rank)
                 if found_fix:
-                    fix_ranks.append(rank)
-        print("Found {found}/{total} true fixes (avg_rank={avg_rank:.2})".format(found=len(
-            fix_ranks), total=evaluation_counter, avg_rank=sum(fix_ranks)/len(fix_ranks)))
+                    found_fix_counter += 1
+        mrr = NGramTester._mean_reciprocal_rank(all_ranks)
+        print("Found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(found=found_fix_counter, total=evaluation_counter, mrr=mrr))

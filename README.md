@@ -71,4 +71,16 @@ example/HelloWorld.java: ADD LT at 22; True fix found rank 0
 Found 1/1 true fixes (avg_rank=0.0)
 ```
 
+When performing evaluation, ensure that the code has not been used for training!
+```sql
+sqlite> PRAGMA table_info(repository_source);
+0|owner|VARCHAR|1||1
+1|name|VARCHAR|1||2
+2|hash|VARCHAR|1||3
+3|path|VARCHAR|1||4
+
+SELECT COUNT(*) FROM repository_source WHERE owner = 'TheAlgorithms';
+41
+```
+
 [MIT License](LICENSE).
