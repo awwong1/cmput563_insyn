@@ -8,7 +8,7 @@ from argparse import ArgumentParser, SUPPRESS
 from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
-from grammar.structure import StructureGenerator
+from grammar.structure import StructureBuilder
 from model.hmm import NaiveJavaTokenHMM
 
 
@@ -73,11 +73,12 @@ def main():
         NGramTester.init_ngram()
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
-        StructureGenerator()
+        struct_builder = StructureBuilder()
+        struct_builder.build_atn_transition_matrix()
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)
-    elif args.train_naieve_hmm:
+    elif args.train_naive_hmm:
         NaiveJavaTokenHMM()
     else:
         parser.print_help()
