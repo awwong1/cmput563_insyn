@@ -13,7 +13,7 @@ class NGramTester:
     then use the ngram to suggest fix.
     """
     logger = logging.getLogger(__name__)
-    ngram = KenLM10Gram()  # thread safe?
+    ngram = None # set in a class method call
     pattern = "*.java"
     all_token_types = list(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
     try_num_locations = 10  # How many locations do we try?
@@ -223,6 +223,10 @@ class NGramTester:
         """
         reciprocal_ranks = map(lambda x: 1/x, ranks)
         return sum(reciprocal_ranks)/len(ranks)
+
+    @classmethod
+    def init_ngram(cls):
+        cls.ngram = KenLM10Gram()
 
     def __init__(self, input_file_path):
         """

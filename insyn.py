@@ -62,6 +62,7 @@ def main():
     if hasattr(args, "sample_parse"):
         DBRunner().view_one_db_source(args.sample_parse or 0)
     elif args.test_ngram_model:
+        NGramTester.init_ngram()
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         StructureGenerator()
