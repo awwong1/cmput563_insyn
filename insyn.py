@@ -9,6 +9,7 @@ from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from grammar.structure import StructureGenerator
+from model.hmm import NaiveJavaTokenHMM
 
 
 def main():
@@ -49,6 +50,11 @@ def main():
         choices=["name", "id"],
         action="store"
     )
+    parser.add_argument(
+        "--train-naive-hmm",
+        help="train meaningless hidden state hmm",
+        action="store_true"
+    )
 
     args = parser.parse_args()
     if args.log:
@@ -71,6 +77,8 @@ def main():
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)
+    elif args.train_naieve_hmm:
+        NaiveJavaTokenHMM()
     else:
         parser.print_help()
 

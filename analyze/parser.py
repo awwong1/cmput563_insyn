@@ -125,6 +125,9 @@ class SourceCodeParser:
         "MONKEYS_AT": 112,  # MONKEYS_AT("@"),
         "CUSTOM": 113,  # CUSTOM;
     }
+    JAVA_TOKEN_ID_MAP = {
+        v: k for k, v in JAVA_TOKEN_TYPE_MAP.items()
+    }
 
     def __init__(self):
         self.javac = Java() # each thread must have its own instance of Javac
