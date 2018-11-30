@@ -44,8 +44,10 @@ def main():
     )
     parser.add_argument(
         "--tokenize-training-data",
-        help="tokenize all training data",
-        action="store_true"
+        help="stdout training data (name='EOF', id='1')",
+        nargs=1,
+        choices=["name", "id"],
+        action="store"
     )
 
     args = parser.parse_args()
@@ -67,7 +69,8 @@ def main():
     elif args.generate_structure:
         StructureGenerator()
     elif args.tokenize_training_data:
-        DBRunner().tokenize_all_db_source()
+        output_type = args.tokenize_training_data[0]
+        DBRunner().tokenize_all_db_source(output_type=output_type)
     else:
         parser.print_help()
 

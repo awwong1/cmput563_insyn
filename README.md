@@ -38,7 +38,7 @@ $ sqlite3 -version
 $ ./insyn.py 
 usage: insyn.py [-h] [-l level] [--test-ngram-model file|dir]
                 [--sample-parse [offset]] [--generate-structure]
-                [--tokenize-training-data]
+                [--tokenize-training-data {name,id}]
 
 Reccomendation Models for Syntactically Incorrect Source Code
 
@@ -51,8 +51,8 @@ optional arguments:
   --sample-parse [offset]
                         sample output sequence from training db
   --generate-structure  generate HHMM structure from grammar
-  --tokenize-training-data
-                        tokenize all training data
+  --tokenize-training-data {name,id}
+                        stdout training data (name='EOF', id='1')
 ```
 
 Example ngram validation on one file (also handles directories, does recursive walk for all `*.java` files)

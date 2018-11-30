@@ -53,7 +53,7 @@ class DBRunner:
             DBRunner.logger.error("{filehash} threw {err}".format(
                 filehash=file_hash, err=str(e)))
 
-    def tokenize_all_db_source(self):
+    def tokenize_all_db_source(self, output_type="name"):
         """
         Tokenize all source files, output to stdout (for training ngram)
         Uses stderr for printing progress messages and errors.
@@ -105,7 +105,15 @@ class DBRunner:
                             )
                         tokenize_counter += 1
                         if str_tokens:
-                            print(str_tokens)
+                            if output_type == "id":
+                                # map name to id
+                                map_func = lambda name: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
+                                map_out = map(map_func, str_tokens.split())
+                                print(" ".join(map_out))
+                            else:
+                                # default
+                                print(str_tokens)
+
                 all_sql_results = []
         conn.close()
 
