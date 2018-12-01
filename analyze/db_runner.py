@@ -6,9 +6,11 @@ import sqlite3
 import sys
 import time
 from multiprocessing import Pool
-from model.ngram import KenLM10Gram
+from antlr4 import ParseTreeWalker
 
 from analyze.parser import SourceCodeParser
+from model.ngram import KenLM10Gram
+from grammar.tree_helper import ParseTreeStepper
 
 
 class DBRunner:
@@ -139,6 +141,12 @@ class DBRunner:
         (antlr_num_err, antlr_tokens, tree) = sc_parser.antlr_analyze(source_code)
 
         if self.verbose:
+            print("============== PARSED CODE ==============")
+            printer = ParseTreeStepper(self.verbose)
+            walker = ParseTreeWalker()
+            walker.walk(printer, tree)
+            printer.show_sequence()
+
             print("============== META/TOKENS ==============")
             print("length of source code string: {0}".format(len(source_code)))
             print()

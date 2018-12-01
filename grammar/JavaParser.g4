@@ -37,17 +37,17 @@ compilationUnit
     ;
 
 packageDeclaration
-    : annotation* PACKAGE qualifiedName SEMI
+    : annotation* PACKAGE qualifiedName ';'
     ;
 
 importDeclaration
-    : IMPORT STATIC? qualifiedName (DOT '*')? SEMI
+    : IMPORT STATIC? qualifiedName ('.' '*')? ';'
     ;
 
 typeDeclaration
     : classOrInterfaceModifier*
       (classDeclaration | enumDeclaration | interfaceDeclaration | annotationTypeDeclaration)
-    | SEMI
+    | ';'
     ;
 
 modifier
@@ -82,7 +82,7 @@ classDeclaration
     ;
 
 typeParameters
-    : '<' typeParameter (COMMA typeParameter)* '>'
+    : '<' typeParameter (',' typeParameter)* '>'
     ;
 
 typeParameter
@@ -94,11 +94,11 @@ typeBound
     ;
 
 enumDeclaration
-    : ENUM throwawayIdentifier (IMPLEMENTS typeList)? LBRACE enumConstants? COMMA? enumBodyDeclarations? RBRACE
+    : ENUM throwawayIdentifier (IMPLEMENTS typeList)? '{' enumConstants? ','? enumBodyDeclarations? '}'
     ;
 
 enumConstants
-    : enumConstant (COMMA enumConstant)*
+    : enumConstant (',' enumConstant)*
     ;
 
 enumConstant
@@ -106,7 +106,7 @@ enumConstant
     ;
 
 enumBodyDeclarations
-    : SEMI classBodyDeclaration*
+    : ';' classBodyDeclaration*
     ;
 
 interfaceDeclaration
@@ -114,15 +114,15 @@ interfaceDeclaration
     ;
 
 classBody
-    : LBRACE classBodyDeclaration* RBRACE
+    : '{' classBodyDeclaration* '}'
     ;
 
 interfaceBody
-    : LBRACE interfaceBodyDeclaration* RBRACE
+    : '{' interfaceBodyDeclaration* '}'
     ;
 
 classBodyDeclaration
-    : SEMI
+    : ';'
     | STATIC? block
     | modifier* memberDeclaration
     ;
@@ -145,14 +145,14 @@ memberDeclaration
    for invalid return type after parsing.
  */
 methodDeclaration
-    : typeTypeOrVoid throwawayIdentifier formalParameters (LBRACKET RBRACKET)*
+    : typeTypeOrVoid throwawayIdentifier formalParameters ('[' ']')*
       (THROWS qualifiedNameList)?
       methodBody
     ;
 
 methodBody
     : block
-    | SEMI
+    | ';'
     ;
 
 typeTypeOrVoid
@@ -173,12 +173,12 @@ constructorDeclaration
     ;
 
 fieldDeclaration
-    : typeType variableDeclarators SEMI
+    : typeType variableDeclarators ';'
     ;
 
 interfaceBodyDeclaration
     : modifier* interfaceMemberDeclaration
-    | SEMI
+    | ';'
     ;
 
 interfaceMemberDeclaration
@@ -192,18 +192,18 @@ interfaceMemberDeclaration
     ;
 
 constDeclaration
-    : typeType constantDeclarator (COMMA constantDeclarator)* SEMI
+    : typeType constantDeclarator (',' constantDeclarator)* ';'
     ;
 
 constantDeclarator
-    : throwawayIdentifier (LBRACKET RBRACKET)* '=' variableInitializer
+    : throwawayIdentifier ('[' ']')* '=' variableInitializer
     ;
 
 // see matching of [] comment in methodDeclaratorRest
 // methodBody from Java8
 interfaceMethodDeclaration
     : interfaceMethodModifier* (typeTypeOrVoid | typeParameters annotation* typeTypeOrVoid)
-      throwawayIdentifier formalParameters (LBRACKET RBRACKET)* (THROWS qualifiedNameList)? methodBody
+      throwawayIdentifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? methodBody
     ;
 
 // Java8
@@ -221,7 +221,7 @@ genericInterfaceMethodDeclaration
     ;
 
 variableDeclarators
-    : variableDeclarator (COMMA variableDeclarator)*
+    : variableDeclarator (',' variableDeclarator)*
     ;
 
 variableDeclarator
@@ -229,7 +229,7 @@ variableDeclarator
     ;
 
 variableDeclaratorId
-    : throwawayIdentifier (LBRACKET RBRACKET)*
+    : throwawayIdentifier ('[' ']')*
     ;
 
 variableInitializer
@@ -238,11 +238,11 @@ variableInitializer
     ;
 
 arrayInitializer
-    : LBRACE (variableInitializer (COMMA variableInitializer)* (COMMA)? )? RBRACE
+    : '{' (variableInitializer (',' variableInitializer)* (',')? )? '}'
     ;
 
 classOrInterfaceType
-    : throwawayIdentifier typeArguments? (DOT throwawayIdentifier typeArguments?)*
+    : throwawayIdentifier typeArguments? ('.' throwawayIdentifier typeArguments?)*
     ;
 
 typeArgument
@@ -251,15 +251,15 @@ typeArgument
     ;
 
 qualifiedNameList
-    : qualifiedName (COMMA qualifiedName)*
+    : qualifiedName (',' qualifiedName)*
     ;
 
 formalParameters
-    : LPAREN formalParameterList? RPAREN
+    : '(' formalParameterList? ')'
     ;
 
 formalParameterList
-    : formalParameter (COMMA formalParameter)* (COMMA lastFormalParameter)?
+    : formalParameter (',' formalParameter)* (',' lastFormalParameter)?
     | lastFormalParameter
     ;
 
@@ -272,7 +272,7 @@ lastFormalParameter
     ;
 
 qualifiedName
-    : throwawayIdentifier (DOT throwawayIdentifier)*
+    : throwawayIdentifier ('.' throwawayIdentifier)*
     ;
 
 literal
@@ -289,11 +289,11 @@ literal
 // ANNOTATIONS
 
 annotation
-    : '@' qualifiedName (LPAREN ( elementValuePairs | elementValue )? RPAREN)?
+    : '@' qualifiedName ('(' ( elementValuePairs | elementValue )? ')')?
     ;
 
 elementValuePairs
-    : elementValuePair (COMMA elementValuePair)*
+    : elementValuePair (',' elementValuePair)*
     ;
 
 elementValuePair
@@ -307,7 +307,7 @@ elementValue
     ;
 
 elementValueArrayInitializer
-    : LBRACE (elementValue (COMMA elementValue)*)? (COMMA)? RBRACE
+    : '{' (elementValue (',' elementValue)*)? (',')? '}'
     ;
 
 annotationTypeDeclaration
@@ -315,20 +315,20 @@ annotationTypeDeclaration
     ;
 
 annotationTypeBody
-    : LBRACE (annotationTypeElementDeclaration)* RBRACE
+    : '{' (annotationTypeElementDeclaration)* '}'
     ;
 
 annotationTypeElementDeclaration
     : modifier* annotationTypeElementRest
-    | SEMI // this is not allowed by the grammar, but apparently allowed by the actual compiler
+    | ';' // this is not allowed by the grammar, but apparently allowed by the actual compiler
     ;
 
 annotationTypeElementRest
-    : typeType annotationMethodOrConstantRest SEMI
-    | classDeclaration SEMI?
-    | interfaceDeclaration SEMI?
-    | enumDeclaration SEMI?
-    | annotationTypeDeclaration SEMI?
+    : typeType annotationMethodOrConstantRest ';'
+    | classDeclaration ';'?
+    | interfaceDeclaration ';'?
+    | enumDeclaration ';'?
+    | annotationTypeDeclaration ';'?
     ;
 
 annotationMethodOrConstantRest
@@ -337,7 +337,7 @@ annotationMethodOrConstantRest
     ;
 
 annotationMethodRest
-    : throwawayIdentifier LPAREN RPAREN defaultValue?
+    : throwawayIdentifier '(' ')' defaultValue?
     ;
 
 annotationConstantRest
@@ -351,11 +351,11 @@ defaultValue
 // STATEMENTS / BLOCKS
 
 block
-    : LBRACE blockStatement* RBRACE
+    : '{' blockStatement* '}'
     ;
 
 blockStatement
-    : localVariableDeclaration SEMI
+    : localVariableDeclaration ';'
     | statement
     | localTypeDeclaration
     ;
@@ -367,31 +367,31 @@ localVariableDeclaration
 localTypeDeclaration
     : classOrInterfaceModifier*
       (classDeclaration | interfaceDeclaration)
-    | SEMI
+    | ';'
     ;
 
 statement
     : blockLabel=block
-    | ASSERT expression (':' expression)? SEMI
+    | ASSERT expression (':' expression)? ';'
     | IF parExpression statement (ELSE statement)?
-    | FOR LPAREN forControl RPAREN statement
+    | FOR '(' forControl ')' statement
     | WHILE parExpression statement
-    | DO statement WHILE parExpression SEMI
+    | DO statement WHILE parExpression ';'
     | TRY block (catchClause+ finallyBlock? | finallyBlock)
     | TRY resourceSpecification block catchClause* finallyBlock?
-    | SWITCH parExpression LBRACE switchBlockStatementGroup* switchLabel* RBRACE
+    | SWITCH parExpression '{' switchBlockStatementGroup* switchLabel* '}'
     | SYNCHRONIZED parExpression block
-    | RETURN expression? SEMI
-    | THROW expression SEMI
-    | BREAK throwawayIdentifier? SEMI
-    | CONTINUE throwawayIdentifier? SEMI
-    | SEMI
-    | statementExpression=expression SEMI
+    | RETURN expression? ';'
+    | THROW expression ';'
+    | BREAK throwawayIdentifier? ';'
+    | CONTINUE throwawayIdentifier? ';'
+    | ';'
+    | statementExpression=expression ';'
     | identifierLabel=throwawayIdentifier ':' statement
     ;
 
 catchClause
-    : CATCH LPAREN variableModifier* catchType throwawayIdentifier RPAREN block
+    : CATCH '(' variableModifier* catchType throwawayIdentifier ')' block
     ;
 
 catchType
@@ -403,11 +403,11 @@ finallyBlock
     ;
 
 resourceSpecification
-    : LPAREN resources SEMI? RPAREN
+    : '(' resources ';'? ')'
     ;
 
 resources
-    : resource (SEMI resource)*
+    : resource (';' resource)*
     ;
 
 resource
@@ -428,7 +428,7 @@ switchLabel
 
 forControl
     : enhancedForControl
-    | forInit? SEMI expression? SEMI forUpdate=expressionList?
+    | forInit? ';' expression? ';' forUpdate=expressionList?
     ;
 
 forInit
@@ -443,22 +443,22 @@ enhancedForControl
 // EXPRESSIONS
 
 parExpression
-    : LPAREN expression RPAREN
+    : '(' expression ')'
     ;
 
 expressionList
-    : expression (COMMA expression)*
+    : expression (',' expression)*
     ;
 
 methodCall
-    : throwawayIdentifier LPAREN expressionList? RPAREN
-    | THIS LPAREN expressionList? RPAREN
-    | SUPER LPAREN expressionList? RPAREN
+    : throwawayIdentifier '(' expressionList? ')'
+    | THIS '(' expressionList? ')'
+    | SUPER '(' expressionList? ')'
     ;
 
 expression
     : primary
-    | expression bop=DOT
+    | expression bop='.'
       ( throwawayIdentifier
       | methodCall
       | THIS
@@ -466,10 +466,10 @@ expression
       | SUPER superSuffix
       | explicitGenericInvocation
       )
-    | expression LBRACKET expression RBRACKET
+    | expression '[' expression ']'
     | methodCall
     | NEW creator
-    | LPAREN typeType RPAREN expression
+    | '(' typeType ')' expression
     | expression postfix=('++' | '--')
     | prefix=('+'|'-'|'++'|'--') expression
     | prefix=('~'|'!') expression
@@ -504,8 +504,8 @@ lambdaExpression
 // Java8
 lambdaParameters
     : throwawayIdentifier
-    | LPAREN formalParameterList? RPAREN
-    | LPAREN throwawayIdentifier (COMMA throwawayIdentifier)* RPAREN
+    | '(' formalParameterList? ')'
+    | '(' throwawayIdentifier (',' throwawayIdentifier)* ')'
     ;
 
 // Java8
@@ -515,17 +515,17 @@ lambdaBody
     ;
 
 primary
-    : LPAREN expression RPAREN
+    : '(' expression ')'
     | THIS
     | SUPER
     | literal
     | throwawayIdentifier
-    | typeTypeOrVoid DOT CLASS
+    | typeTypeOrVoid '.' CLASS
     | nonWildcardTypeArguments (explicitGenericInvocationSuffix | THIS arguments)
     ;
 
 classType
-    : (classOrInterfaceType DOT)? annotation* throwawayIdentifier typeArguments?
+    : (classOrInterfaceType '.')? annotation* throwawayIdentifier typeArguments?
     ;
 
 creator
@@ -534,7 +534,7 @@ creator
     ;
 
 createdName
-    : throwawayIdentifier typeArgumentsOrDiamond? (DOT throwawayIdentifier typeArgumentsOrDiamond?)*
+    : throwawayIdentifier typeArgumentsOrDiamond? ('.' throwawayIdentifier typeArgumentsOrDiamond?)*
     | primitiveType
     ;
 
@@ -543,7 +543,7 @@ innerCreator
     ;
 
 arrayCreatorRest
-    : LBRACKET (RBRACKET (LBRACKET RBRACKET)* arrayInitializer | expression RBRACKET (LBRACKET expression RBRACKET)* (LBRACKET RBRACKET)*)
+    : '[' (']' ('[' ']')* arrayInitializer | expression ']' ('[' expression ']')* ('[' ']')*)
     ;
 
 classCreatorRest
@@ -569,11 +569,11 @@ nonWildcardTypeArguments
     ;
 
 typeList
-    : typeType (COMMA typeType)*
+    : typeType (',' typeType)*
     ;
 
 typeType
-    : annotation? (classOrInterfaceType | primitiveType) (LBRACKET RBRACKET)*
+    : annotation? (classOrInterfaceType | primitiveType) ('[' ']')*
     ;
 
 primitiveType
@@ -588,12 +588,12 @@ primitiveType
     ;
 
 typeArguments
-    : '<' typeArgument (COMMA typeArgument)* '>'
+    : '<' typeArgument (',' typeArgument)* '>'
     ;
 
 superSuffix
     : arguments
-    | DOT throwawayIdentifier arguments?
+    | '.' throwawayIdentifier arguments?
     ;
 
 explicitGenericInvocationSuffix
@@ -602,11 +602,11 @@ explicitGenericInvocationSuffix
     ;
 
 arguments
-    : LPAREN expressionList? RPAREN
+    : '(' expressionList? ')'
     ;
 
 // custom rule, javac treats underscore as a special identifier
 throwawayIdentifier
-    : UNDERSCORE
-    | IDENTIFIER
+    : IDENTIFIER
+    | UNDERSCORE
     ;

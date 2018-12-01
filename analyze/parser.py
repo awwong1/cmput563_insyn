@@ -1,5 +1,5 @@
 import time
-from antlr4 import InputStream, CommonTokenStream, ParseTreeWalker
+from antlr4 import InputStream, CommonTokenStream
 from javac_parser import Java
 
 from grammar.JavaParser import JavaParser
@@ -145,7 +145,7 @@ class SourceCodeParser:
                 lambda str_token: SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(str_token, -1), str_tokens)
 
     @staticmethod
-    def antlr_analyze(source_code):
+    def antlr_analyze(source_code, remove_whitespace=False):
         source_buf = InputStream(source_code)
         lexer = JavaLexer(source_buf)
         stream = CommonTokenStream(lexer)
@@ -154,6 +154,13 @@ class SourceCodeParser:
 
         tree = parser.compilationUnit()
         antlr_tokens = stream.tokens
+        if remove_whitespace:
+            cleaned_antlr_tokens = []
+            for common_token in antlr_tokens:
+                symb = parser.symbolicNames[common_token.type]
+                if symb not in ["WS", "COMMENT", "LINE_COMMENT"]:
+                    cleaned_antlr_tokens.append(common_token)
+            antlr_tokens = cleaned_antlr_tokens
         num_errors = parser._errHandler.num_errors
 
         return (num_errors, antlr_tokens, tree)
