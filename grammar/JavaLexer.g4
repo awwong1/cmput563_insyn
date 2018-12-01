@@ -130,41 +130,45 @@ DOT:                '.';
 
 // Operators
 
-ASSIGN:             '=';
+EQ:                 '=';
 GT:                 '>';
 LT:                 '<';
 BANG:               '!';
 TILDE:              '~';
-QUESTION:           '?';
+QUES:           '?';
 COLON:              ':';
-EQUAL:              '==';
-LE:                 '<=';
-GE:                 '>=';
-NOTEQUAL:           '!=';
-AND:                '&&';
-OR:                 '||';
-INC:                '++';
-DEC:                '--';
-ADD:                '+';
+EQEQ:              '==';
+LTEQ:                 '<=';
+GTEQ:                 '>=';
+BANGEQ:           '!=';
+AMPAMP:                '&&';
+BARBAR:                 '||';
+PLUSPLUS:                '++';
+SUBSUB:                '--';
+PLUS:                '+';
 SUB:                '-';
-MUL:                '*';
-DIV:                '/';
-BITAND:             '&';
-BITOR:              '|';
+STAR:                '*';
+SLASH:                '/';
+AMP:             '&';
+BAR:              '|';
 CARET:              '^';
-MOD:                '%';
+PERCENT:                '%';
 
-ADD_ASSIGN:         '+=';
-SUB_ASSIGN:         '-=';
-MUL_ASSIGN:         '*=';
-DIV_ASSIGN:         '/=';
-AND_ASSIGN:         '&=';
-OR_ASSIGN:          '|=';
-XOR_ASSIGN:         '^=';
-MOD_ASSIGN:         '%=';
-LSHIFT_ASSIGN:      '<<=';
-RSHIFT_ASSIGN:      '>>=';
-URSHIFT_ASSIGN:     '>>>=';
+LTLT: '<<';
+GTGT: '>>';
+GTGTGT: '>>>';
+
+PLUSEQ:         '+=';
+SUBEQ:         '-=';
+STAREQ:         '*=';
+SLASHEQ:         '/=';
+AMPEQ:         '&=';
+BAREQ:          '|=';
+CARETEQ:         '^=';
+PERCENTEQ:         '%=';
+LTLTEQ:      '<<=';
+GTGTEQ:      '>>=';
+GTGTGTEQ:     '>>>=';
 
 // Java 8 tokens
 
@@ -173,7 +177,7 @@ COLCOL:         '::';
 
 // Additional symbols not defined in the lexical specification
 
-AT:                 '@';
+MONKEYS_AT:                 '@';
 ELLIPSIS:           '...';
 
 // Whitespace and comments
@@ -185,6 +189,7 @@ LINE_COMMENT:       '//' ~[\r\n]*    -> channel(HIDDEN);
 // Identifiers
 
 IDENTIFIER:         Letter LetterOrDigit*;
+UNDERSCORE:     '_';
 
 // Fragment rules
 

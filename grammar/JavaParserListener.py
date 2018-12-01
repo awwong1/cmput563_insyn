@@ -926,3 +926,12 @@ class JavaParserListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by JavaParser#throwawayIdentifier.
+    def enterThrowawayIdentifier(self, ctx:JavaParser.ThrowawayIdentifierContext):
+        pass
+
+    # Exit a parse tree produced by JavaParser#throwawayIdentifier.
+    def exitThrowawayIdentifier(self, ctx:JavaParser.ThrowawayIdentifierContext):
+        pass
+
+

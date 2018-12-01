@@ -75,7 +75,7 @@ variableModifier
     ;
 
 classDeclaration
-    : CLASS IDENTIFIER typeParameters?
+    : CLASS throwawayIdentifier typeParameters?
       (EXTENDS typeType)?
       (IMPLEMENTS typeList)?
       classBody
@@ -86,7 +86,7 @@ typeParameters
     ;
 
 typeParameter
-    : annotation* IDENTIFIER (EXTENDS typeBound)?
+    : annotation* throwawayIdentifier (EXTENDS typeBound)?
     ;
 
 typeBound
@@ -94,7 +94,7 @@ typeBound
     ;
 
 enumDeclaration
-    : ENUM IDENTIFIER (IMPLEMENTS typeList)? LBRACE enumConstants? COMMA? enumBodyDeclarations? RBRACE
+    : ENUM throwawayIdentifier (IMPLEMENTS typeList)? LBRACE enumConstants? COMMA? enumBodyDeclarations? RBRACE
     ;
 
 enumConstants
@@ -102,7 +102,7 @@ enumConstants
     ;
 
 enumConstant
-    : annotation* IDENTIFIER arguments? classBody?
+    : annotation* throwawayIdentifier arguments? classBody?
     ;
 
 enumBodyDeclarations
@@ -110,7 +110,7 @@ enumBodyDeclarations
     ;
 
 interfaceDeclaration
-    : INTERFACE IDENTIFIER typeParameters? (EXTENDS typeList)? interfaceBody
+    : INTERFACE throwawayIdentifier typeParameters? (EXTENDS typeList)? interfaceBody
     ;
 
 classBody
@@ -145,7 +145,7 @@ memberDeclaration
    for invalid return type after parsing.
  */
 methodDeclaration
-    : typeTypeOrVoid IDENTIFIER formalParameters (LBRACKET RBRACKET)*
+    : typeTypeOrVoid throwawayIdentifier formalParameters (LBRACKET RBRACKET)*
       (THROWS qualifiedNameList)?
       methodBody
     ;
@@ -169,7 +169,7 @@ genericConstructorDeclaration
     ;
 
 constructorDeclaration
-    : IDENTIFIER formalParameters (THROWS qualifiedNameList)? constructorBody=block
+    : throwawayIdentifier formalParameters (THROWS qualifiedNameList)? constructorBody=block
     ;
 
 fieldDeclaration
@@ -196,14 +196,14 @@ constDeclaration
     ;
 
 constantDeclarator
-    : IDENTIFIER (LBRACKET RBRACKET)* '=' variableInitializer
+    : throwawayIdentifier (LBRACKET RBRACKET)* '=' variableInitializer
     ;
 
 // see matching of [] comment in methodDeclaratorRest
 // methodBody from Java8
 interfaceMethodDeclaration
     : interfaceMethodModifier* (typeTypeOrVoid | typeParameters annotation* typeTypeOrVoid)
-      IDENTIFIER formalParameters (LBRACKET RBRACKET)* (THROWS qualifiedNameList)? methodBody
+      throwawayIdentifier formalParameters (LBRACKET RBRACKET)* (THROWS qualifiedNameList)? methodBody
     ;
 
 // Java8
@@ -229,7 +229,7 @@ variableDeclarator
     ;
 
 variableDeclaratorId
-    : IDENTIFIER (LBRACKET RBRACKET)*
+    : throwawayIdentifier (LBRACKET RBRACKET)*
     ;
 
 variableInitializer
@@ -242,7 +242,7 @@ arrayInitializer
     ;
 
 classOrInterfaceType
-    : IDENTIFIER typeArguments? (DOT IDENTIFIER typeArguments?)*
+    : throwawayIdentifier typeArguments? (DOT throwawayIdentifier typeArguments?)*
     ;
 
 typeArgument
@@ -272,7 +272,7 @@ lastFormalParameter
     ;
 
 qualifiedName
-    : IDENTIFIER (DOT IDENTIFIER)*
+    : throwawayIdentifier (DOT throwawayIdentifier)*
     ;
 
 literal
@@ -297,7 +297,7 @@ elementValuePairs
     ;
 
 elementValuePair
-    : IDENTIFIER '=' elementValue
+    : throwawayIdentifier '=' elementValue
     ;
 
 elementValue
@@ -311,7 +311,7 @@ elementValueArrayInitializer
     ;
 
 annotationTypeDeclaration
-    : '@' INTERFACE IDENTIFIER annotationTypeBody
+    : '@' INTERFACE throwawayIdentifier annotationTypeBody
     ;
 
 annotationTypeBody
@@ -337,7 +337,7 @@ annotationMethodOrConstantRest
     ;
 
 annotationMethodRest
-    : IDENTIFIER LPAREN RPAREN defaultValue?
+    : throwawayIdentifier LPAREN RPAREN defaultValue?
     ;
 
 annotationConstantRest
@@ -383,15 +383,15 @@ statement
     | SYNCHRONIZED parExpression block
     | RETURN expression? SEMI
     | THROW expression SEMI
-    | BREAK IDENTIFIER? SEMI
-    | CONTINUE IDENTIFIER? SEMI
+    | BREAK throwawayIdentifier? SEMI
+    | CONTINUE throwawayIdentifier? SEMI
     | SEMI
     | statementExpression=expression SEMI
-    | identifierLabel=IDENTIFIER ':' statement
+    | identifierLabel=throwawayIdentifier ':' statement
     ;
 
 catchClause
-    : CATCH LPAREN variableModifier* catchType IDENTIFIER RPAREN block
+    : CATCH LPAREN variableModifier* catchType throwawayIdentifier RPAREN block
     ;
 
 catchType
@@ -422,7 +422,7 @@ switchBlockStatementGroup
     ;
 
 switchLabel
-    : CASE (constantExpression=expression | enumConstantName=IDENTIFIER) ':'
+    : CASE (constantExpression=expression | enumConstantName=throwawayIdentifier) ':'
     | DEFAULT ':'
     ;
 
@@ -451,7 +451,7 @@ expressionList
     ;
 
 methodCall
-    : IDENTIFIER LPAREN expressionList? RPAREN
+    : throwawayIdentifier LPAREN expressionList? RPAREN
     | THIS LPAREN expressionList? RPAREN
     | SUPER LPAREN expressionList? RPAREN
     ;
@@ -459,7 +459,7 @@ methodCall
 expression
     : primary
     | expression bop=DOT
-      ( IDENTIFIER
+      ( throwawayIdentifier
       | methodCall
       | THIS
       | NEW nonWildcardTypeArguments? innerCreator
@@ -475,7 +475,7 @@ expression
     | prefix=('~'|'!') expression
     | expression bop=('*'|'/'|'%') expression
     | expression bop=('+'|'-') expression
-    | expression ('<' '<' | '>' '>' '>' | '>' '>') expression
+    | expression ('<<' | '>>>' | '>>') expression
     | expression bop=('<=' | '>=' | '>' | '<') expression
     | expression bop=INSTANCEOF typeType
     | expression bop=('==' | '!=') expression
@@ -491,8 +491,8 @@ expression
     | lambdaExpression // Java8
 
     // Java 8 methodReference
-    | expression COLCOL typeArguments? IDENTIFIER
-    | typeType COLCOL (typeArguments? IDENTIFIER | NEW)
+    | expression COLCOL typeArguments? throwawayIdentifier
+    | typeType COLCOL (typeArguments? throwawayIdentifier | NEW)
     | classType COLCOL typeArguments? NEW
     ;
 
@@ -503,9 +503,9 @@ lambdaExpression
 
 // Java8
 lambdaParameters
-    : IDENTIFIER
+    : throwawayIdentifier
     | LPAREN formalParameterList? RPAREN
-    | LPAREN IDENTIFIER (COMMA IDENTIFIER)* RPAREN
+    | LPAREN throwawayIdentifier (COMMA throwawayIdentifier)* RPAREN
     ;
 
 // Java8
@@ -519,13 +519,13 @@ primary
     | THIS
     | SUPER
     | literal
-    | IDENTIFIER
+    | throwawayIdentifier
     | typeTypeOrVoid DOT CLASS
     | nonWildcardTypeArguments (explicitGenericInvocationSuffix | THIS arguments)
     ;
 
 classType
-    : (classOrInterfaceType DOT)? annotation* IDENTIFIER typeArguments?
+    : (classOrInterfaceType DOT)? annotation* throwawayIdentifier typeArguments?
     ;
 
 creator
@@ -534,12 +534,12 @@ creator
     ;
 
 createdName
-    : IDENTIFIER typeArgumentsOrDiamond? (DOT IDENTIFIER typeArgumentsOrDiamond?)*
+    : throwawayIdentifier typeArgumentsOrDiamond? (DOT throwawayIdentifier typeArgumentsOrDiamond?)*
     | primitiveType
     ;
 
 innerCreator
-    : IDENTIFIER nonWildcardTypeArgumentsOrDiamond? classCreatorRest
+    : throwawayIdentifier nonWildcardTypeArgumentsOrDiamond? classCreatorRest
     ;
 
 arrayCreatorRest
@@ -593,14 +593,20 @@ typeArguments
 
 superSuffix
     : arguments
-    | DOT IDENTIFIER arguments?
+    | DOT throwawayIdentifier arguments?
     ;
 
 explicitGenericInvocationSuffix
     : SUPER superSuffix
-    | IDENTIFIER arguments
+    | throwawayIdentifier arguments
     ;
 
 arguments
     : LPAREN expressionList? RPAREN
+    ;
+
+// custom rule, javac treats underscore as a special identifier
+throwawayIdentifier
+    : UNDERSCORE
+    | IDENTIFIER
     ;
