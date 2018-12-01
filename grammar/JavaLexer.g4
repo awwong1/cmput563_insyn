@@ -129,6 +129,9 @@ COMMA:              ',';
 DOT:                '.';
 
 // Operators
+GTGTGT: '>>>';
+LTLT: '<<';
+GTGT: '>>';
 
 EQ:                 '=';
 GT:                 '>';
@@ -154,10 +157,6 @@ BAR:              '|';
 CARET:              '^';
 PERCENT:                '%';
 
-LTLT: '<<';
-GTGT: '>>';
-GTGTGT: '>>>';
-
 PLUSEQ:         '+=';
 SUBEQ:         '-=';
 STAREQ:         '*=';
@@ -180,15 +179,19 @@ COLCOL:         '::';
 MONKEYS_AT:                 '@';
 ELLIPSIS:           '...';
 
-// Identifiers
-UNDERSCORE:         '_';
-IDENTIFIER:         Letter LetterOrDigit*;
-
 // Whitespace and comments
 
 WS:                 [ \t\r\n\u000C]+ -> channel(HIDDEN);
 COMMENT:            '/*' .*? '*/'    -> channel(HIDDEN);
 LINE_COMMENT:       '//' ~[\r\n]*    -> channel(HIDDEN);
+
+// Identifiers
+UNDERSCORE:         '_';
+IDENTIFIER:         Letter LetterOrDigit*;
+
+// Lexer is order sensitive!!
+// this catch all should only be parsed out for end of file
+T_EOF:            '!_!E!_!O!_!F!_!'; // end of file hack
 
 // Fragment rules
 

@@ -145,7 +145,7 @@ class SourceCodeParser:
                 lambda str_token: SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(str_token, -1), str_tokens)
 
     @staticmethod
-    def antlr_analyze(source_code, remove_whitespace=False):
+    def antlr_analyze(source_code, remove_whitespace=True):
         source_buf = InputStream(source_code)
         lexer = JavaLexer(source_buf)
         stream = CommonTokenStream(lexer)

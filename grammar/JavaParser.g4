@@ -145,7 +145,7 @@ memberDeclaration
    for invalid return type after parsing.
  */
 methodDeclaration
-    : typeTypeOrVoid throwawayIdentifier formalParameters ('[' ']')*
+    : typeTypeOrVoid IDENTIFIER formalParameters ('[' ']')*
       (THROWS qualifiedNameList)?
       methodBody
     ;
@@ -169,7 +169,7 @@ genericConstructorDeclaration
     ;
 
 constructorDeclaration
-    : throwawayIdentifier formalParameters (THROWS qualifiedNameList)? constructorBody=block
+    : IDENTIFIER formalParameters (THROWS qualifiedNameList)? constructorBody=block
     ;
 
 fieldDeclaration
@@ -196,14 +196,14 @@ constDeclaration
     ;
 
 constantDeclarator
-    : throwawayIdentifier ('[' ']')* '=' variableInitializer
+    : IDENTIFIER ('[' ']')* '=' variableInitializer
     ;
 
 // see matching of [] comment in methodDeclaratorRest
 // methodBody from Java8
 interfaceMethodDeclaration
     : interfaceMethodModifier* (typeTypeOrVoid | typeParameters annotation* typeTypeOrVoid)
-      throwawayIdentifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? methodBody
+      IDENTIFIER formalParameters ('[' ']')* (THROWS qualifiedNameList)? methodBody
     ;
 
 // Java8
@@ -229,7 +229,7 @@ variableDeclarator
     ;
 
 variableDeclaratorId
-    : throwawayIdentifier ('[' ']')*
+    : IDENTIFIER ('[' ']')*
     ;
 
 variableInitializer
@@ -242,7 +242,7 @@ arrayInitializer
     ;
 
 classOrInterfaceType
-    : throwawayIdentifier typeArguments? ('.' throwawayIdentifier typeArguments?)*
+    : IDENTIFIER typeArguments? ('.' IDENTIFIER typeArguments?)*
     ;
 
 typeArgument
@@ -272,7 +272,7 @@ lastFormalParameter
     ;
 
 qualifiedName
-    : throwawayIdentifier ('.' throwawayIdentifier)*
+    : throwawayIdentifier ('.' IDENTIFIER)*
     ;
 
 literal
@@ -297,7 +297,7 @@ elementValuePairs
     ;
 
 elementValuePair
-    : throwawayIdentifier '=' elementValue
+    : IDENTIFIER '=' elementValue
     ;
 
 elementValue
@@ -311,7 +311,7 @@ elementValueArrayInitializer
     ;
 
 annotationTypeDeclaration
-    : '@' INTERFACE throwawayIdentifier annotationTypeBody
+    : '@' INTERFACE IDENTIFIER annotationTypeBody
     ;
 
 annotationTypeBody
@@ -337,7 +337,7 @@ annotationMethodOrConstantRest
     ;
 
 annotationMethodRest
-    : throwawayIdentifier '(' ')' defaultValue?
+    : IDENTIFIER '(' ')' defaultValue?
     ;
 
 annotationConstantRest
@@ -475,7 +475,7 @@ expression
     | prefix=('~'|'!') expression
     | expression bop=('*'|'/'|'%') expression
     | expression bop=('+'|'-') expression
-    | expression ('<<' | '>>>' | '>>') expression
+    | expression ('<' '<' | '>' '>' '>' | '>' '>' | '<<' | '>>>' | '>>' | '>>' '>' | '>>' '>') expression
     | expression bop=('<=' | '>=' | '>' | '<') expression
     | expression bop=INSTANCEOF typeType
     | expression bop=('==' | '!=') expression
