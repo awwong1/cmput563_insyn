@@ -10,6 +10,7 @@ from antlr4.atn.Transition import Transition
 from analyze.parser import SourceCodeParser
 from .JavaParser import JavaParser
 
+EPSILON = 1e-7
 
 class StructureBuilder():
     """Take JavaParser.py (outputted by Antlr4) and make HHMM/HMM compatible structure
@@ -167,9 +168,25 @@ class StructureBuilder():
             emission_probs[node_counter] = javac_token_map[node]
             node_counter += 1
         
-        # normalize the emission probs
+        # normalize the emission probs with some epsilon
+        np.place(emission_probs, emission_probs == 0, [EPSILON])
         em_sums = emission_probs.sum(axis=1)
         norm_em_probs = emission_probs / em_sums[:, np.newaxis]
 
+        # normalize the transition matrix
         trans_matrix = nx.adjacency_matrix(self.atn_graph).todense()
-        return trans_matrix, norm_em_probs
+        np.place(trans_matrix, trans_matrix == 0, [EPSILON])
+        norm_trans_matrix = trans_matrix.astype(float)
+        for row_idx in range(0, len(norm_trans_matrix)):
+            row = norm_trans_matrix[row_idx]
+            row_sum = row.sum()
+            if row_sum > 0:
+                row = row / row_sum
+                norm_trans_matrix[row_idx] = row
+            else:
+                StructureBuilder.logger.warning("No transitions from %d, set trans to 1", row_idx)
+                # invalid to have EOF termination I guess
+                norm_trans_matrix[row_idx, 0] = 1
+
+
+        return norm_trans_matrix, norm_em_probs

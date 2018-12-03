@@ -206,3 +206,6 @@ pip-selfcheck.json
 .vscode
 
 grammar/.antlr
+
+atn_graph.png
+rule_graph.png

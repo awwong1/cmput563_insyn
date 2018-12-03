@@ -3,13 +3,14 @@
 University of Alberta, CMPUT 563 Fall 2018
 """
 import logging
+import numpy as np
 from argparse import ArgumentParser, SUPPRESS
 
 from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from grammar.structure import StructureBuilder
-from model.hmm import NaiveJavaTokenHMM
+from model.hmm import ATNJavaTokenHMM
 
 
 def main():
@@ -51,9 +52,10 @@ def main():
         action="store"
     )
     parser.add_argument(
-        "--train-naive-hmm",
-        help="train meaningless hidden state hmm",
-        action="store_true"
+        "--test-atn-hmm-model",
+        help="read java code, change random token, list suggestions",
+        metavar="file|dir",
+        action="store"
     )
 
     args = parser.parse_args()
@@ -74,12 +76,14 @@ def main():
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         struct_builder = StructureBuilder()
-        struct_builder.build_atn_hmm_matrices()
+        atn_trans, atn_norm_em = struct_builder.build_atn_hmm_matrices()
+        np.save('atn_trans.npy', atn_trans)
+        np.save('atn_norm_em.npy', atn_norm_em)
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)
-    elif args.train_naive_hmm:
-        NaiveJavaTokenHMM()
+    elif args.test_atn_hmm_model:
+        ATNJavaTokenHMM()
     else:
         parser.print_help()
 
