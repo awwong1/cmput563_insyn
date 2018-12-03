@@ -10,7 +10,7 @@ from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from grammar.structure import StructureBuilder
-from model.hmm import ATNJavaTokenHMM
+from model.hmm import ATNJavaTokenHMM, RuleJavaTokenHMM
 
 
 def main():
@@ -57,6 +57,12 @@ def main():
         metavar="file|dir",
         action="store"
     )
+    parser.add_argument(
+        "--test-rule-hmm-model",
+        help="read java code, change random token, list suggestions",
+        metavar="file|dir",
+        action="store"
+    )
 
     args = parser.parse_args()
     if args.log:
@@ -90,6 +96,8 @@ def main():
         DBRunner().tokenize_all_db_source(output_type=output_type)
     elif args.test_atn_hmm_model:
         ATNJavaTokenHMM()
+    elif args.test_rule_hmm_model:
+        RuleJavaTokenHMM()
     else:
         parser.print_help()
 
