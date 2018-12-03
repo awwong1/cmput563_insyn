@@ -8,6 +8,7 @@ from analyze.parser import SourceCodeParser
 
 TEST_SEQ = "34 2 73 2 73 2 71 27 2 73 2 73 2 71 27 2 73 2 73 2 71 37 11 2 19 2 77 2 76 67 37 2 65 66 67 42 65 2 73 11 66 71 68 68 1"
 
+
 class ATNJavaTokenHMM:
     """
     Multinomial HMM for java token predictions.
@@ -31,18 +32,16 @@ class ATNJavaTokenHMM:
             verbose=True
         )
         self.model.n_features = atn_em.shape[1]
-        self.model.transmat_=atn_trans
-        self.model.startprob_=start_probs
+        self.model.transmat_ = atn_trans
+        self.model.startprob_ = start_probs
         self.model.emissionprob_ = atn_em
 
         print(self.model)
         input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))
-        score = self.model.score([input_tokens])
-        print(score)
-        # value error when getting posteriors
-        # score, posteriors = self.model.score_samples([input_tokens])
-        # print(score)
-        # print(posteriors)
+        for idx in range(1, len(input_tokens)):
+            score = self.model.score([input_tokens[:idx]])
+            print("idx: {idx}/{total} score: {score}".format(idx=idx,
+                                                             total=len(input_tokens)-1, score=score))
 
 
 class RuleJavaTokenHMM:
@@ -63,14 +62,19 @@ class RuleJavaTokenHMM:
             verbose=True
         )
         self.model.n_features = rule_em.shape[1]
-        self.model.transmat_=rule_trans
-        self.model.startprob_=start_probs
+        self.model.transmat_ = rule_trans
+        self.model.startprob_ = start_probs
         self.model.emissionprob_ = rule_em
 
         print(self.model)
         input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))
-        score = self.model.score([input_tokens])
-        print(score)
+        for idx in range(1, len(input_tokens)):
+            score = self.model.score([input_tokens[:idx]])
+            print("idx: {idx}/{total} score: {score}".format(idx=idx,
+                                                             total=len(input_tokens)-1, score=score))
+
+        # score = self.model.score([input_tokens])
+        # print(score)
         # value error when getting posteriors
         # score, posteriors = self.model.score_samples([input_tokens])
         # print(score)
