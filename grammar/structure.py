@@ -116,45 +116,43 @@ class StructureBuilder():
             self.logger.debug("\tRULE %s EMITS %s", self.parser.ruleNames[rule_id], " ".join(
                 list(map(lambda s: str(s), token_emissions))))
 
-    def build_atn_hmm_matrices(self):
-        """
-        transition matrix using the nodes and edges in augmented transition network
-        """
-        # prune emissions, remove all -1 values and get all tokenless nodes
+    @staticmethod
+    def _build_hmm_matrices(graph, emissions):
+                # prune emissions, remove all -1 values and get all tokenless nodes
         tokenless_states = []
-        for state, tokens in self.state_token_emissions.items():
+        for state, tokens in emissions.items():
             pruned_tokens = [x for x in tokens if x != -1]
-            self.state_token_emissions[state] = pruned_tokens
+            emissions[state] = pruned_tokens
 
-        for node in self.atn_graph.nodes:
-            pruned_tokens = self.state_token_emissions.get(node, [])
+        for node in graph.nodes:
+            pruned_tokens = emissions.get(node, [])
             if len(pruned_tokens) == 0:
                 tokenless_states.append(node)
 
         while tokenless_states:
             tokenless_state = tokenless_states.pop()
             # remove the state from the graph, but connect the in and out edges
-            in_edges = self.atn_graph.in_edges(tokenless_state)
-            out_edges = self.atn_graph.out_edges(tokenless_state)
+            in_edges = graph.in_edges(tokenless_state)
+            out_edges = graph.out_edges(tokenless_state)
             for (parent, _) in in_edges:
                 for (_, child) in out_edges:
-                    self.atn_graph.add_edge(parent, child)
-            self.atn_graph.remove_node(tokenless_state)
+                    graph.add_edge(parent, child)
+            graph.remove_node(tokenless_state)
 
-        num_nodes = self.atn_graph.number_of_nodes()
+        num_nodes = graph.number_of_nodes()
         num_token_types = len(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
         javac_token_map = dict()
         emission_probs = np.zeros((num_nodes, num_token_types))
         node_counter = 0
-        for node in self.atn_graph.nodes:
+        for node in graph.nodes:
             javac_token_map[node] = javac_token_map.get(node, [0 for x in range(0, num_token_types)])
-            pruned_tokens = self.state_token_emissions.get(node, [])
+            pruned_tokens = emissions.get(node, [])
             if len(pruned_tokens) == 0:
                 raise ValueError("node with no token emissions still exist!")
 
             for antlr_token in pruned_tokens:
                 # map to Antlr symbolic name
-                token_name = self.parser.symbolicNames[antlr_token]
+                token_name = StructureBuilder.parser.symbolicNames[antlr_token]
                 if token_name == "T_EOF":
                     token_name = "EOF"
                 # map to JavaC symbolic name
@@ -174,19 +172,32 @@ class StructureBuilder():
         norm_em_probs = emission_probs / em_sums[:, np.newaxis]
 
         # normalize the transition matrix
-        trans_matrix = nx.adjacency_matrix(self.atn_graph).todense()
+        trans_matrix = nx.adjacency_matrix(graph).todense()
         np.place(trans_matrix, trans_matrix == 0, [EPSILON])
         norm_trans_matrix = trans_matrix.astype(float)
         for row_idx in range(0, len(norm_trans_matrix)):
             row = norm_trans_matrix[row_idx]
             row_sum = row.sum()
             if row_sum > 0:
-                row = row / row_sum
-                norm_trans_matrix[row_idx] = row
+                norm_trans_matrix[row_idx] = row / row_sum
             else:
                 StructureBuilder.logger.warning("No transitions from %d, set trans to 1", row_idx)
                 # invalid to have EOF termination I guess
                 norm_trans_matrix[row_idx, 0] = 1
-
+                row = norm_trans_matrix[row_idx]
+                norm_trans_matrix[row_idx] = row / row.sum()
 
         return norm_trans_matrix, norm_em_probs
+
+    def build_atn_hmm_matrices(self):
+        """
+        transition matrix using the nodes and edges in augmented transition network
+        """
+        return self._build_hmm_matrices(self.atn_graph, self.state_token_emissions)
+
+    def build_rule_hmm_matrices(self):
+        """
+        transition matrix using the nodes and edges in rule transition network
+        """
+        return self._build_hmm_matrices(self.rule_graph, self.rule_token_emissions)
+

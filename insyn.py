@@ -76,9 +76,15 @@ def main():
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         struct_builder = StructureBuilder()
-        atn_trans, atn_norm_em = struct_builder.build_atn_hmm_matrices()
+        print("Building ATN transition and emissions...")
+        atn_trans, atn_em = struct_builder.build_atn_hmm_matrices()
         np.save('atn_trans.npy', atn_trans)
-        np.save('atn_norm_em.npy', atn_norm_em)
+        np.save('atn_em.npy', atn_em)
+        print("Building RULE transition and emissions...")
+        rule_trans, rule_em = struct_builder.build_rule_hmm_matrices()
+        np.save('rule_trans.npy', rule_trans)
+        np.save('rule_em.npy', rule_em)
+        print("done")
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)
