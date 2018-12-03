@@ -74,7 +74,7 @@ def main():
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         struct_builder = StructureBuilder()
-        struct_builder.build_atn_transition_matrix()
+        struct_builder.build_atn_hmm_matrices()
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)

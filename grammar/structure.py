@@ -7,6 +7,7 @@ import numpy as np
 from antlr4.atn.ATNState import ATNState
 from antlr4.atn.Transition import Transition
 
+from analyze.parser import SourceCodeParser
 from .JavaParser import JavaParser
 
 
@@ -26,12 +27,20 @@ class StructureBuilder():
 
         self.structure_parsed_states = set()
         self._parse_structure()
+
+        # state 1 always has EOF
+        self.state_token_emissions[1].append(
+            self.parser.symbolicNames.index("T_EOF"))
+
         print("parsed {0}/{1} ATN states".format(
             len(self.structure_parsed_states), len(self.parser.atn.states)))
 
         self.logger.info("atnG nodes %d", self.atn_graph.number_of_nodes())
         self.logger.info("atnG edges %d", self.atn_graph.number_of_edges())
         nx.drawing.nx_pydot.write_dot(self.atn_graph, "atn_graph.dot")
+
+        self.logger.info("ruleG nodes %d", self.rule_graph.number_of_nodes())
+        self.logger.info("ruleG edges %d", self.rule_graph.number_of_edges())
         nx.drawing.nx_pydot.write_dot(self.rule_graph, "rule_graph.dot")
 
     def _parse_structure(self):
@@ -106,39 +115,61 @@ class StructureBuilder():
             self.logger.debug("\tRULE %s EMITS %s", self.parser.ruleNames[rule_id], " ".join(
                 list(map(lambda s: str(s), token_emissions))))
 
-    @staticmethod
-    def _build_trans_matrix(graph):
-        n = graph.number_of_nodes()
-        trans_matrix = np.zeros((n, n,))
-        for idx in graph.nodes:
-            node = graph.nodes[idx]
-            out_edges = graph.out_edges(idx)
-            StructureBuilder.logger.debug(node.get("label", idx), out_edges)
-            if out_edges:
-                norm_prob = 1/len(out_edges)
-                for (from_node, to_node) in out_edges:
-                    trans_matrix[from_node][to_node] = norm_prob
-        return trans_matrix
-
-    def build_atn_transition_matrix(self):
+    def build_atn_hmm_matrices(self):
         """
         transition matrix using the nodes and edges in augmented transition network
         """
-        return self._build_trans_matrix(self.atn_graph)
+        # prune emissions, remove all -1 values and get all tokenless nodes
+        tokenless_states = []
+        for state, tokens in self.state_token_emissions.items():
+            pruned_tokens = [x for x in tokens if x != -1]
+            self.state_token_emissions[state] = pruned_tokens
 
-    def build_rule_transition_matrix(self):
-        """
-        transition matrix using the nodes and edges in rule transitions
-        """
-        return self._build_trans_matrix(self.rule_graph)
+        for node in self.atn_graph.nodes:
+            pruned_tokens = self.state_token_emissions.get(node, [])
+            if len(pruned_tokens) == 0:
+                tokenless_states.append(node)
 
-    def build_atn_antlr_emission_probs(self, use_avg=True):
-        """
-        atn state to emission probabilities
-        """
-        num_hidden_states = self.atn_graph.number_of_nodes()
-        num_token_types = len(self.parser.symbolicNames)
-        emission_probs = np.zeros((num_hidden_states, num_token_types))
-        for idx in self.atn_graph.nodes:
-            possible_tokens = self.state_token_emissions.get(idx, [])
-            pass
+        while tokenless_states:
+            tokenless_state = tokenless_states.pop()
+            # remove the state from the graph, but connect the in and out edges
+            in_edges = self.atn_graph.in_edges(tokenless_state)
+            out_edges = self.atn_graph.out_edges(tokenless_state)
+            for (parent, _) in in_edges:
+                for (_, child) in out_edges:
+                    self.atn_graph.add_edge(parent, child)
+            self.atn_graph.remove_node(tokenless_state)
+
+        num_nodes = self.atn_graph.number_of_nodes()
+        num_token_types = len(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
+        javac_token_map = dict()
+        emission_probs = np.zeros((num_nodes, num_token_types))
+        node_counter = 0
+        for node in self.atn_graph.nodes:
+            javac_token_map[node] = javac_token_map.get(node, [0 for x in range(0, num_token_types)])
+            pruned_tokens = self.state_token_emissions.get(node, [])
+            if len(pruned_tokens) == 0:
+                raise ValueError("node with no token emissions still exist!")
+
+            for antlr_token in pruned_tokens:
+                # map to Antlr symbolic name
+                token_name = self.parser.symbolicNames[antlr_token]
+                if token_name == "T_EOF":
+                    token_name = "EOF"
+                # map to JavaC symbolic name
+                javac_id = SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(
+                    token_name, -1)
+                if javac_id == -1:
+                    StructureBuilder.logger.debug(
+                        "JavaC Invalid token found in node %d", node)
+                    continue
+                javac_token_map[node][javac_id] += 1
+            emission_probs[node_counter] = javac_token_map[node]
+            node_counter += 1
+        
+        # normalize the emission probs
+        em_sums = emission_probs.sum(axis=1)
+        norm_em_probs = emission_probs / em_sums[:, np.newaxis]
+
+        trans_matrix = nx.adjacency_matrix(self.atn_graph).todense()
+        return trans_matrix, norm_em_probs
