@@ -5,7 +5,7 @@ import random
 from multiprocessing import Pool, cpu_count, current_process
 from analyze.parser import SourceCodeParser
 from model.ngram import KenLM10Gram
-from model.hmm import ATNJavaTokenHMM, RuleJavaTokenHMM
+from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM
 
 
 class ModelTester:
