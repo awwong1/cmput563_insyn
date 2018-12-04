@@ -116,6 +116,8 @@ class DBRunner:
                                 # default
                                 print(str_tokens)
 
+                        if tokenize_counter > 5: break
+
                 all_sql_results = []
         conn.close()
 
