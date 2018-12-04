@@ -3,12 +3,14 @@
 University of Alberta, CMPUT 563 Fall 2018
 """
 import logging
+import numpy as np
 from argparse import ArgumentParser, SUPPRESS
 
 from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
-from grammar.structure import StructureGenerator
+from analyze.model_tester import ModelTester
+from grammar.structure import StructureBuilder
 
 
 def main():
@@ -49,6 +51,13 @@ def main():
         choices=["name", "id"],
         action="store"
     )
+    parser.add_argument(
+        "--evaluate-all-models",
+        help="read java code, change random token, list suggestions",
+        metavar="file|dir",
+        action="store"
+
+    )
 
     args = parser.parse_args()
     if args.log:
@@ -56,6 +65,7 @@ def main():
         if hasattr(logging, raw_log_level):
             log_level = getattr(logging, raw_log_level)
             logging.basicConfig(level=log_level)
+            # logging.basicConfig(filename="sample_out.log", level=log_level)
         else:
             logging.warning("Invalid log level: {0}".format(args.log))
     else:
@@ -67,10 +77,22 @@ def main():
         NGramTester.init_ngram()
         NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
-        StructureGenerator()
+        struct_builder = StructureBuilder()
+        print("Building ATN transition and emissions...")
+        atn_trans, atn_em = struct_builder.build_atn_hmm_matrices()
+        np.save('atn_trans.npy', atn_trans)
+        np.save('atn_em.npy', atn_em)
+        print("Building RULE transition and emissions...")
+        rule_trans, rule_em = struct_builder.build_rule_hmm_matrices()
+        np.save('rule_trans.npy', rule_trans)
+        np.save('rule_em.npy', rule_em)
+        print("done")
     elif args.tokenize_training_data:
         output_type = args.tokenize_training_data[0]
         DBRunner().tokenize_all_db_source(output_type=output_type)
+    elif args.evaluate_all_models:
+        ModelTester.init_models()
+        ModelTester(args.evaluate_all_models).run_evaluation()
     else:
         parser.print_help()
 

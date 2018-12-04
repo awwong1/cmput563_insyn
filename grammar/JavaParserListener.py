@@ -440,24 +440,6 @@ class JavaParserListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by JavaParser#integerLiteral.
-    def enterIntegerLiteral(self, ctx:JavaParser.IntegerLiteralContext):
-        pass
-
-    # Exit a parse tree produced by JavaParser#integerLiteral.
-    def exitIntegerLiteral(self, ctx:JavaParser.IntegerLiteralContext):
-        pass
-
-
-    # Enter a parse tree produced by JavaParser#floatLiteral.
-    def enterFloatLiteral(self, ctx:JavaParser.FloatLiteralContext):
-        pass
-
-    # Exit a parse tree produced by JavaParser#floatLiteral.
-    def exitFloatLiteral(self, ctx:JavaParser.FloatLiteralContext):
-        pass
-
-
     # Enter a parse tree produced by JavaParser#annotation.
     def enterAnnotation(self, ctx:JavaParser.AnnotationContext):
         pass
@@ -941,6 +923,15 @@ class JavaParserListener(ParseTreeListener):
 
     # Exit a parse tree produced by JavaParser#arguments.
     def exitArguments(self, ctx:JavaParser.ArgumentsContext):
+        pass
+
+
+    # Enter a parse tree produced by JavaParser#throwawayIdentifier.
+    def enterThrowawayIdentifier(self, ctx:JavaParser.ThrowawayIdentifierContext):
+        pass
+
+    # Exit a parse tree produced by JavaParser#throwawayIdentifier.
+    def exitThrowawayIdentifier(self, ctx:JavaParser.ThrowawayIdentifierContext):
         pass
 
 

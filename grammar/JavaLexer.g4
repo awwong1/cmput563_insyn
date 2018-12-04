@@ -1,3 +1,4 @@
+// Modified JavaLexer to work with javac outputted tokens
 /*
  [The "BSD licence"]
  Copyright (c) 2013 Terence Parr, Sam Harwell
@@ -83,27 +84,37 @@ VOLATILE:           'volatile';
 WHILE:              'while';
 
 // Literals
+INTLITERAL: ('0' | [1-9] (Digits? | '_'+ Digits))              // decimal literal
+          | '0' [xX] [0-9a-fA-F] ([0-9a-fA-F_]* [0-9a-fA-F])?  // hex literal
+          | '0' '_'* [0-7] ([0-7_]* [0-7])?                    // oct literal
+          | '0' [bB] [01] ([01_]* [01])?                       // binary literal
+          ;
 
-DECIMAL_LITERAL:    ('0' | [1-9] (Digits? | '_'+ Digits)) [lL]?;
-HEX_LITERAL:        '0' [xX] [0-9a-fA-F] ([0-9a-fA-F_]* [0-9a-fA-F])? [lL]?;
-OCT_LITERAL:        '0' '_'* [0-7] ([0-7_]* [0-7])? [lL]?;
-BINARY_LITERAL:     '0' [bB] [01] ([01_]* [01])? [lL]?;
-                    
-FLOAT_LITERAL:      (Digits '.' Digits? | '.' Digits) ExponentPart? [fFdD]?
-             |       Digits (ExponentPart [fFdD]? | [fFdD])
-             ;
+LONGLITERAL: ('0' | [1-9] (Digits? | '_'+ Digits)) [lL]
+           | '0' [xX] [0-9a-fA-F] ([0-9a-fA-F_]* [0-9a-fA-F])? [lL]
+           | '0' '_'* [0-7] ([0-7_]* [0-7])? [lL]
+           | '0' [bB] [01] ([01_]* [01])? [lL]
+           ;
 
-HEX_FLOAT_LITERAL:  '0' [xX] (HexDigits '.'? | HexDigits? '.' HexDigits) [pP] [+-]? Digits [fFdD]?;
-
-BOOL_LITERAL:       'true'
-            |       'false'
+FLOATLITERAL: (Digits '.' Digits? | '.' Digits) ExponentPart? [fF]
+            | Digits (ExponentPart [fF] | [fF])
+            | '0' [xX] (HexDigits '.'? | HexDigits? '.' HexDigits) [pP] [+-]? Digits [fF]
             ;
 
-CHAR_LITERAL:       '\'' (~['\\\r\n] | EscapeSequence) '\'';
+DOUBLELITERAL: (Digits '.' Digits? | '.' Digits) ExponentPart? [dD]?
+            | Digits (ExponentPart [dD]? | [dD]?)
+            | '0' [xX] (HexDigits '.'? | HexDigits? '.' HexDigits) [pP] [+-]? Digits [dD]?
+            ;
 
-STRING_LITERAL:     '"' (~["\\\r\n] | EscapeSequence)* '"';
 
-NULL_LITERAL:       'null';
+TRUE: 'true';
+FALSE: 'false';
+
+CHARLITERAL:       '\'' (~['\\\r\n] | EscapeSequence) '\'';
+
+STRINGLITERAL:     '"' (~["\\\r\n] | EscapeSequence)* '"';
+
+NULL:       'null';
 
 // Separators
 
@@ -111,58 +122,61 @@ LPAREN:             '(';
 RPAREN:             ')';
 LBRACE:             '{';
 RBRACE:             '}';
-LBRACK:             '[';
-RBRACK:             ']';
+LBRACKET:             '[';
+RBRACKET:             ']';
 SEMI:               ';';
 COMMA:              ',';
 DOT:                '.';
 
 // Operators
+GTGTGT: '>>>';
+LTLT: '<<';
+GTGT: '>>';
 
-ASSIGN:             '=';
+EQ:                 '=';
 GT:                 '>';
 LT:                 '<';
 BANG:               '!';
 TILDE:              '~';
-QUESTION:           '?';
+QUES:           '?';
 COLON:              ':';
-EQUAL:              '==';
-LE:                 '<=';
-GE:                 '>=';
-NOTEQUAL:           '!=';
-AND:                '&&';
-OR:                 '||';
-INC:                '++';
-DEC:                '--';
-ADD:                '+';
+EQEQ:              '==';
+LTEQ:                 '<=';
+GTEQ:                 '>=';
+BANGEQ:           '!=';
+AMPAMP:                '&&';
+BARBAR:                 '||';
+PLUSPLUS:                '++';
+SUBSUB:                '--';
+PLUS:                '+';
 SUB:                '-';
-MUL:                '*';
-DIV:                '/';
-BITAND:             '&';
-BITOR:              '|';
+STAR:                '*';
+SLASH:                '/';
+AMP:             '&';
+BAR:              '|';
 CARET:              '^';
-MOD:                '%';
+PERCENT:                '%';
 
-ADD_ASSIGN:         '+=';
-SUB_ASSIGN:         '-=';
-MUL_ASSIGN:         '*=';
-DIV_ASSIGN:         '/=';
-AND_ASSIGN:         '&=';
-OR_ASSIGN:          '|=';
-XOR_ASSIGN:         '^=';
-MOD_ASSIGN:         '%=';
-LSHIFT_ASSIGN:      '<<=';
-RSHIFT_ASSIGN:      '>>=';
-URSHIFT_ASSIGN:     '>>>=';
+PLUSEQ:         '+=';
+SUBEQ:         '-=';
+STAREQ:         '*=';
+SLASHEQ:         '/=';
+AMPEQ:         '&=';
+BAREQ:          '|=';
+CARETEQ:         '^=';
+PERCENTEQ:         '%=';
+LTLTEQ:      '<<=';
+GTGTEQ:      '>>=';
+GTGTGTEQ:     '>>>=';
 
 // Java 8 tokens
 
 ARROW:              '->';
-COLONCOLON:         '::';
+COLCOL:         '::';
 
 // Additional symbols not defined in the lexical specification
 
-AT:                 '@';
+MONKEYS_AT:                 '@';
 ELLIPSIS:           '...';
 
 // Whitespace and comments
@@ -172,8 +186,12 @@ COMMENT:            '/*' .*? '*/'    -> channel(HIDDEN);
 LINE_COMMENT:       '//' ~[\r\n]*    -> channel(HIDDEN);
 
 // Identifiers
-
+UNDERSCORE:         '_';
 IDENTIFIER:         Letter LetterOrDigit*;
+
+// Lexer is order sensitive!!
+// this catch all should only be parsed out for end of file
+T_EOF:            '!_!E!_!O!_!F!_!'; // end of file hack
 
 // Fragment rules
 

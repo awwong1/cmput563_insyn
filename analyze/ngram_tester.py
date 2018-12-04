@@ -267,7 +267,6 @@ class NGramTester:
 
     def run_evaluation(self):
         self._pre_evaluation()
-
         evaluation_counter = 0
         found_fix_counter = 0
         all_ranks = []  # if true fix found, what was the rank?
