@@ -11,6 +11,7 @@ from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from analyze.model_tester import ModelTester
 from grammar.structure import StructureBuilder
+from model.hmm import RuleJavaTokenHMMTrain 
 
 
 def main():
@@ -58,6 +59,12 @@ def main():
         action="store"
 
     )
+    parser.add_argument( 
+        "--test-rule-hmm-model-train", 
+        help="read java code, change random token, list suggestions", 
+        metavar="file|dir", 
+        action="store" 
+    ) 
 
     args = parser.parse_args()
     if args.log:
@@ -93,6 +100,8 @@ def main():
     elif args.evaluate_all_models:
         ModelTester.init_models()
         ModelTester(args.evaluate_all_models).run_evaluation()
+    elif args.test_rule_hmm_model_train: 
+        RuleJavaTokenHMMTrain() 
     else:
         parser.print_help()
 
