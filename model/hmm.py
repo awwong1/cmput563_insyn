@@ -145,6 +145,8 @@ class RuleJavaTokenHMMTrain:
         self.model.fit(X, lengths)
         print(self.model)
 
+        # TODO: Add epsilons and renormalize
+
         # input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))
         # for idx in range(1, len(input_tokens)):
         #     score = self.model.score([input_tokens[:idx]])
