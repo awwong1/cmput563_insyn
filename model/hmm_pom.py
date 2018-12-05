@@ -2,6 +2,7 @@
 Using Pomegranate library because hmmlearn doesn't do scoring properly and is slow
 Hope pomegranate is better
 """
+import tables
 import numpy as np
 from pomegranate import HiddenMarkovModel, DiscreteDistribution
 from pomegranate.callbacks import ModelCheckpoint
@@ -183,7 +184,9 @@ class TrainedJavaTokenHMM:
     def __init__(self, num_hidden_states):
 
         #train_mat = DBRunner().tokenize_all_db_source_gen(output_type="np_id")
-        train_mat = np.load("train_data_size_1000.npy")
+        #train_mat = np.load("train_data_size_1000.npy")
+        table_file = tables.open_file("train_data_size_10000.h5", mode='r')
+        train_mat = table_file.root.data
 
         self.model = HiddenMarkovModel.from_samples(
             DiscreteDistribution,
@@ -197,9 +200,13 @@ class TrainedJavaTokenHMM:
         )
 
         print("EVAL TEST SEQUENCE")
-        input_tokens = list(map(lambda x: x, TEST_SEQ.split()))
+        input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))
+        print(TEST_SEQ)
         for idx in range(1, len(input_tokens)):
             score = self.model.log_probability(input_tokens[:idx])
             print("idx: {idx}/{total} score: {score}".format(idx=idx,
                                                              total=len(input_tokens)-1, score=score))
+            print("predicted states:")
+            print(self.model.predict(input_tokens[:idx]))
+            print()
         print('Done.')

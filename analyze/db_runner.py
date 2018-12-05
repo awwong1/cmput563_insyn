@@ -2,6 +2,7 @@
 """
 import logging
 import os.path
+import tables
 import sqlite3
 import sys
 import time
@@ -141,12 +142,21 @@ class DBRunner:
         conn.close()
 
     def create_npy_train_data(self, size=10):
-        raw_sample_arr = []
+        # MAX_LEN = 2420215 # known because we tokenized all data once
+        filename = "train_data_size_{}.h5".format(size)
+        h5file = tables.open_file(filename, mode="w")
+        array_c = h5file.create_vlarray(h5file.root, 'data', atom=tables.Int16Atom())
+        # no_pad = []
+
         for np_arr in self.tokenize_all_db_source_gen(output_type="np_id", limit=size):
-            raw_sample_arr.append(np_arr)
-        np_arrs = np.array(raw_sample_arr, dtype=object)
-        filename = "train_data_size_{}.npy".format(size)
-        np.save(filename, np_arrs)
+            # cur = np.full((1, MAX_LEN), np.nan)
+            # cur[0][:len(np_arr)] = np_arr
+            # array_c.append(cur)
+            # no_pad.append(np_arr)
+ 
+            array_c.append(np_arr)
+        # np_arrs = np.array(no_pad, dtype=object)
+        h5file.close()
         print("Saved to {}".format(filename))
 
     def view_one_db_source(self, offset=0):
