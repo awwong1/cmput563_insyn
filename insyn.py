@@ -11,7 +11,7 @@ from analyze.parser import SourceCodeParser
 from analyze.ngram_tester import NGramTester
 from analyze.model_tester import ModelTester
 from grammar.structure import StructureBuilder
-from model.hmm import RuleJavaTokenHMMTrain 
+from model.hmm_pom import RuleJavaTokenHMMTrain 
 
 
 def main():

@@ -5,6 +5,7 @@ import os.path
 import sqlite3
 import sys
 import time
+import numpy as np 
 from multiprocessing import Pool
 from antlr4 import ParseTreeWalker
 
@@ -60,6 +61,9 @@ class DBRunner:
         Tokenize all source files, output to stdout (for training ngram)
         Uses stderr for printing progress messages and errors.
         """
+
+        raw_ids = []
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(hash) FROM source_file")
@@ -111,13 +115,16 @@ class DBRunner:
                                 # map name to id
                                 map_func = lambda name: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
                                 map_out = map(map_func, str_tokens.split())
-                                print(" ".join(map_out))
+                                raw_ids.append(np.array(list(map_out))) 
+                                # print(" ".join(map_out)) 
                             else:
                                 # default
                                 print(str_tokens)
 
                 all_sql_results = []
         conn.close()
+        np_ids = np.array(raw_ids, dtype=object) 
+        np.save("train_data.npy", np_ids) 
 
     def view_one_db_source(self, offset=0):
         """
