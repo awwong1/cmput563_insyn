@@ -4,6 +4,7 @@ Hope pomegranate is better
 """
 import numpy as np
 from pomegranate import HiddenMarkovModel, DiscreteDistribution
+from pomegranate.callbacks import ModelCheckpoint
 from analyze.db_runner import DBRunner
 
 from analyze.parser import SourceCodeParser
@@ -176,3 +177,29 @@ class RuleJavaTokenHMMTrain:
 
         # self.model.fit(X, lengths)
         # print(self.model)
+
+
+class TrainedJavaTokenHMM:
+    def __init__(self, num_hidden_states):
+
+        #train_mat = DBRunner().tokenize_all_db_source_gen(output_type="np_id")
+        train_mat = np.load("train_data_size_1000.npy")
+
+        self.model = HiddenMarkovModel.from_samples(
+            DiscreteDistribution,
+            num_hidden_states,
+            train_mat,
+            verbose=True,
+            stop_threshold=1e-4,
+            name="TrainedJavaTokenHMM",
+            n_jobs=-1, # maximum parallelism
+            callbacks=[ModelCheckpoint(verbose=True)]
+        )
+
+        print("EVAL TEST SEQUENCE")
+        input_tokens = list(map(lambda x: x, TEST_SEQ.split()))
+        for idx in range(1, len(input_tokens)):
+            score = self.model.log_probability(input_tokens[:idx])
+            print("idx: {idx}/{total} score: {score}".format(idx=idx,
+                                                             total=len(input_tokens)-1, score=score))
+        print('Done.')
