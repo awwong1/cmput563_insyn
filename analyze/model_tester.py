@@ -1,3 +1,6 @@
+"""
+this whole file requires refactoring
+"""
 import logging
 import fnmatch
 import os
@@ -5,7 +8,7 @@ import random
 from multiprocessing import Pool, cpu_count, current_process
 from analyze.parser import SourceCodeParser
 from model.ngram import KenLM10Gram
-from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM
+from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM, Trained10StateHMM, Trained100StateHMM
 
 
 class ModelTester:
@@ -17,10 +20,13 @@ class ModelTester:
     ngram = None  # set in a class method call
     atn_hmm = None
     rule_hmm = None
+    t10_hmm = None
+    t100_hmm = None
 
     pattern = "*.java"
     all_token_types = list(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
-    all_token_type_ids = list(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.values())
+    all_token_type_ids = list(
+        map(lambda x: str(x), SourceCodeParser.JAVA_TOKEN_TYPE_MAP.values()))
     try_num_locations = 10  # How many locations do we try?
     num_suggestions = 1000  # How many suggestions do we reveal?
 
@@ -69,8 +75,10 @@ class ModelTester:
         token = "ERROR"  # set in the 3 change types
         if change_type == "ADD":
             add_token_types = ModelTester.all_token_types.copy()
-            add_token_types.remove("CUSTOM")
-            add_token_types.remove("EOF")
+            if "CUSTOM" in add_token_types:
+                add_token_types.remove("CUSTOM")
+            if "EOF" in add_token_types:
+                add_token_types.remove("EOF")
             rand_token = random.choice(add_token_types)
             test_tokens.insert(change_idx, rand_token)
             ModelTester.logger.info("{}: BREAK by {} {} at {}".format(source_path,
@@ -83,8 +91,10 @@ class ModelTester:
         elif change_type == "MOD":
             sub_token_types = ModelTester.all_token_types.copy()
             sub_token_types.remove(original_tokens[change_idx])
-            sub_token_types.remove("CUSTOM")
-            sub_token_types.remove("EOF")
+            if "CUSTOM" in sub_token_types:
+                sub_token_types.remove("CUSTOM")
+            if "EOF" in sub_token_types:
+                sub_token_types.remove("EOF")
             rand_token = random.choice(sub_token_types)
             test_tokens[change_idx] = rand_token
             ModelTester.logger.info("{}: BREAK by {} from {} to {} at {}".format(
@@ -185,40 +195,57 @@ class ModelTester:
         return (score, seq_idx)
 
     @staticmethod
+    def _train10_score(seq_idx_and_test_seq):
+        seq_idx, test_seq = seq_idx_and_test_seq
+        score = ModelTester.t10_hmm.score(test_seq)
+        return (score, seq_idx)
+
+    @staticmethod
+    def _train100_score(seq_idx_and_test_seq):
+        seq_idx, test_seq = seq_idx_and_test_seq
+        score = ModelTester.t100_hmm.score(test_seq)
+        return (score, seq_idx)
+
+    @staticmethod
     def _hmm_locate_and_fix(source_and_err_tokens, model_name="n/a"):
 
-        if model_name == "atn":
+        if model_name == "atn-hmm":
             SCORE_FUNC = ModelTester._atn_score
-        elif model_name == "rule":
+        elif model_name == "rule-hmm":
             SCORE_FUNC = ModelTester._rule_score
+        elif model_name == "t10-hmm":
+            SCORE_FUNC = ModelTester._train10_score
+        elif model_name == "t100-hmm":
+            SCORE_FUNC = ModelTester._train100_score
+        else:
+            raise RuntimeError("Model not defined: {}".format(model_name))
 
         # LOCATE THE MOST LIKELY ERROR LOCATIONS USING THE HMM
         (source_path, test_tokens) = source_and_err_tokens  # unpack the dict item
         test_seq_ids = list(
-            map(lambda x: SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x], test_tokens))
+            map(lambda x: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x]), test_tokens))
         token_idx_prob = []
         _locate_pre_add_fix = dict()
         _locate_add_fix_score = dict()
         for seq_idx in range(1, len(test_seq_ids)):
             _locate_pre_add_fix[seq_idx] = test_seq_ids[:seq_idx]
 
-        with Pool() as pool:
-            for (score, add_fix_seq_idx) in pool.imap(SCORE_FUNC, _locate_pre_add_fix.items()):
-                _locate_add_fix_score[add_fix_seq_idx] = score
-                ModelTester.logger.info(
-                    "{path}: {name} SCORING_LOCATION {token_idx} ({score})".format(
-                        name=model_name,
-                        path=source_path,
-                        token_idx=add_fix_seq_idx,
-                        score=score
-                    ))
+        for (score, add_fix_seq_idx) in map(SCORE_FUNC, _locate_pre_add_fix.items()):
+            _locate_add_fix_score[add_fix_seq_idx] = score
+            ModelTester.logger.info(
+                "{path}: SCORING_LOCATION {token_idx} ({score}) [{name}]".format(
+                    name=model_name,
+                    path=source_path,
+                    token_idx=add_fix_seq_idx,
+                    score=score
+                ))
         cur_score = 0
         for seq_idx in range(1, len(test_seq_ids)):
             seq_score = _locate_add_fix_score[seq_idx]
             contrib_score = seq_score - cur_score
             cur_score = seq_score
             ModelTester.logger.info(
-                "{path}: {name} CHECKING_LOCATION_SCORE {token_idx} ({score})".format(
+                "{path}: CHECKING_LOCATION_SCORE {token_idx} ({score}) [{name}]".format(
                     name=model_name,
                     path=source_path,
                     token_idx=seq_idx,
@@ -236,23 +263,22 @@ class ModelTester:
             fix_tokens_by_add = test_seq_ids.copy()
             fix_tokens_by_add.insert(0, add_token)
             _zero_add_fix[add_token] = fix_tokens_by_add
-        with Pool() as pool:
-            for (score, add_token) in pool.imap(SCORE_FUNC, _zero_add_fix.items()):
-                ModelTester.logger.debug(
-                    "{path}: CHECK_ADD {token_idx} BEFORE SEQUENCE ({score}) ({name}-hmm)".format(
-                        name=model_name,
-                        path=source_path,
-                        token_idx=add_token,
-                        score=score
-                    ))
-                fix_prob.append(
-                    (score, _zero_add_fix[add_token], "ADD", 0, add_token))
+        for (score, add_token) in map(SCORE_FUNC, _zero_add_fix.items()):
+            ModelTester.logger.debug(
+                "{path}: CHECK_ADD {token_idx} BEFORE SEQUENCE ({score}) [{name}]".format(
+                    name=model_name,
+                    path=source_path,
+                    token_idx=add_token,
+                    score=score
+                ))
+            fix_prob.append(
+                (score, _zero_add_fix[add_token], "ADD", 0, add_token))
 
         # For the most likely error locations, try add, mod, and delete
         for token_idx, score in token_idx_prob[:ModelTester.try_num_locations]:
             to_change_token = test_seq_ids[token_idx]
             ModelTester.logger.info(
-                "{path}: CHECKING_LOCATION {token_idx} ({score}) ({name}-hmm)".format(
+                "{path}: CHECKING_LOCATION {token_idx} ({score}) [{name}]".format(
                     name=model_name,
                     path=source_path,
                     token_idx=token_idx,
@@ -264,18 +290,17 @@ class ModelTester:
                 fix_tokens_by_add = test_seq_ids.copy()
                 fix_tokens_by_add.insert(token_idx, add_token)
                 _add_fix[add_token] = fix_tokens_by_add
-            with Pool() as pool:
-                for (score, add_token) in pool.imap(SCORE_FUNC, _add_fix.items()):
-                    ModelTester.logger.debug(
-                        "{path}: CHECKING_ADD {token} AT {pos} ({score}) ({name}-hmm)".format(
-                            name=model_name,
-                            path=source_path,
-                            token=add_token,
-                            pos=token_idx,
-                            score=score
-                        ))
-                    fix_prob.append(
-                        (score, _add_fix[add_token], "ADD", token_idx, add_token))
+            for (score, add_token) in map(SCORE_FUNC, _add_fix.items()):
+                ModelTester.logger.debug(
+                    "{path}: CHECKING_ADD {token} AT {pos} ({score}) [{name}]".format(
+                        name=model_name,
+                        path=source_path,
+                        token=add_token,
+                        pos=token_idx,
+                        score=score
+                    ))
+                fix_prob.append(
+                    (score, _add_fix[add_token], "ADD", token_idx, add_token))
 
             # try changing token, cannot mod into itself
             sub_token_types = ModelTester.all_token_type_ids.copy()
@@ -285,28 +310,24 @@ class ModelTester:
                 fix_tokens_by_mod = test_seq_ids.copy()
                 fix_tokens_by_mod[token_idx] = mod_token
                 _sub_fix[mod_token] = fix_tokens_by_mod
-            with Pool() as pool:
-                for (score, mod_token) in pool.imap(SCORE_FUNC, _sub_fix.items()):
-                    ModelTester.logger.debug(
-                        "{path}: CHECKING_MOD {token} AT {pos} ({score}) ({name}-hmm)".format(
-                            name=model_name,
-                            path=source_path,
-                            token=mod_token,
-                            pos=token_idx,
-                            score=score
-                        ))
-                    fix_prob.append(
-                        (score, _sub_fix[mod_token], "MOD", token_idx, mod_token))
+            for (score, mod_token) in map(SCORE_FUNC, _sub_fix.items()):
+                ModelTester.logger.debug(
+                    "{path}: CHECKING_MOD {token} AT {pos} ({score}) [{name}]".format(
+                        name=model_name,
+                        path=source_path,
+                        token=mod_token,
+                        pos=token_idx,
+                        score=score
+                    ))
+                fix_prob.append(
+                    (score, _sub_fix[mod_token], "MOD", token_idx, mod_token))
 
             # try deleting token
             fix_tokens_by_del = test_seq_ids.copy()
             del_token = fix_tokens_by_del.pop(token_idx)
-            if model_name == "rule":
-                new_score_by_del = ModelTester.rule_hmm.score(fix_tokens_by_del)
-            elif model_name == "atn":
-                new_score_by_del = ModelTester.atn_hmm.score(fix_tokens_by_del)
+            (new_score_by_del, _) = SCORE_FUNC([del_token, fix_tokens_by_del])
             ModelTester.logger.debug(
-                "{path}: CHECKING_DEL {token} AT {pos} ({score}) ({name}-hmm)".format(
+                "{path}: CHECKING_DEL {token} AT {pos} ({score}) [{name}]".format(
                     name=model_name,
                     path=source_path,
                     token=del_token,
@@ -321,11 +342,19 @@ class ModelTester:
 
     @staticmethod
     def _rule_hmm_locate_and_fix(source_and_err_tokens):
-        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="rule")
+        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="rule-hmm")
 
     @staticmethod
     def _atn_hmm_locate_and_fix(source_and_err_tokens):
-        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="atn")
+        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="atn-hmm")
+
+    @staticmethod
+    def _train10_hmm_locate_and_fix(source_and_err_tokens):
+        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="t10-hmm")
+
+    @staticmethod
+    def _train100_hmm_locate_and_fix(source_and_err_tokens):
+        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="t100-hmm")
 
     @staticmethod
     def _mean_reciprocal_rank(ranks):
@@ -336,11 +365,13 @@ class ModelTester:
         reciprocal_ranks = map(lambda x: 1/x, ranks)
         return sum(reciprocal_ranks)/len(ranks)
 
-    @classmethod
-    def init_models(cls):
-        cls.ngram = KenLM10Gram()
-        cls.atn_hmm = ATNJavaTokenHMM()
-        cls.rule_hmm = RuleJavaTokenHMM()
+    @staticmethod
+    def _print_model_summary(rank_list, model_name="n/a"):
+        mrr = ModelTester._mean_reciprocal_rank(rank_list)
+        model_found = [x for x in rank_list if x < ModelTester.num_suggestions]
+        print("{name} found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
+            name=model_name,
+            found=len(model_found), total=len(rank_list), mrr=mrr))
 
     def __init__(self, input_file_path):
         """
@@ -379,6 +410,26 @@ class ModelTester:
             raise ValueError("All {pattern} files syntactically incorrect".format(
                 pattern=self.pattern))
 
+    def _run_model_evaluation(self, loc_and_fix_func, model_name="n/a"):
+        model_ranks = []
+        with Pool() as pool:
+            for (source_path, fix_probs) in pool.imap(loc_and_fix_func, self.one_error_tokens.items()):
+                eval_stub = self.eval_str[source_path]
+                orig_seq = self.file_to_tokens[source_path]
+                rank = 1
+                for fix_prob in fix_probs:
+                    # unpack
+                    new_score, fix_sequence, action, token_idx, to_change_token = fix_prob
+                    ModelTester.logger.info("%s: RANK %d SUGGEST %s %s AT %d (score: %.2f)",
+                                            model_name, rank, action,
+                                            to_change_token, token_idx, new_score)
+                    if fix_sequence == orig_seq:
+                        break
+                    else:
+                        rank += 1
+                model_ranks.append(rank)
+        return model_ranks
+
     def run_evaluation(self):
         self._pre_evaluation()
 
@@ -393,74 +444,34 @@ class ModelTester:
                 self.one_error_tokens[source_path] = test_tokens
                 self.eval_str[source_path] = eval_str
 
-        # PERFORM NGRAM LOCATION DETECTION AND FIX RECCOMENDATION
-        ngram_ranks = []
-        with Pool() as pool:
-            for (source_path, fix_probs) in pool.imap(ModelTester._ngram_locate_and_fix, self.one_error_tokens.items()):
-                eval_stub = self.eval_str[source_path]
-                orig_seq = self.file_to_tokens[source_path]
-                rank = 1
-                for fix_prob in fix_probs:
-                    # unpack
-                    new_score, fix_sequence, action, token_idx, to_change_token = fix_prob
-                    ModelTester.logger.info("NGRAM: RANK %d SUGGEST %s %s AT %d (score: %.2f) %s", rank, action,
-                                            to_change_token, token_idx, new_score, eval_stub)
-                    if fix_sequence == orig_seq:
-                        break
-                    else:
-                        rank += 1
-                ngram_ranks.append(rank)
+        # PERFORM PROBABALISTIC LOCATION DETECTION AND FIX RECCOMENDATION
+        ngram_ranks = self._run_model_evaluation(
+            ModelTester._ngram_locate_and_fix, "ngram")
+        rule_ranks = self._run_model_evaluation(ModelTester._rule_hmm_locate_and_fix, "rule-hmm")
+        atn_ranks = self._run_model_evaluation(ModelTester._atn_hmm_locate_and_fix, "atn-hmm")
+        t10_ranks = self._run_model_evaluation(
+            ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
+        # t100_ranks = self._run_model_evaluation(ModelTester._train100_hmm_locate_and_fix, "t100-hmm")
 
-        # PERFORM RULE HMM LOCATION DETECTION AND FIX RECCOMENDATION
-        rule_ranks = []
-        for (source_path, fix_probs) in map(ModelTester._rule_hmm_locate_and_fix, self.one_error_tokens.items()):
-            eval_stub = self.eval_str[source_path]
-            orig_seq = self.file_to_tokens[source_path]
-            orig_seq_ids = list(
-                map(lambda x: SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x], orig_seq))
-            rank = 1
-            for fix_prob in fix_probs:
-                # unpack
-                new_score, fix_sequence, action, token_idx, to_change_token = fix_prob
-                ModelTester.logger.info("RULE: RANK %d, SUGGEST %s %s AT %d (score: %.2f) %s", rank, action,
-                                        SourceCodeParser.JAVA_TOKEN_ID_MAP[to_change_token], token_idx, new_score, eval_stub)
-                if fix_sequence == orig_seq_ids:
-                    break
-                else:
-                    rank += 1
-            rule_ranks.append(rank)
+        # PRINT SUMMARY OF RESULTS AND MODEL PERFORMANCE
+        print("\n---- SUMMARY OF CHANGES ----")
+        for source_path, eval_str in self.eval_str.items():
+            print("tokenized {s_path}, performed {eval_str}".format(
+                s_path=source_path,
+                eval_str=eval_str
+            ))
+        print("\n---- MODEL PERFORMANCE ----")
+        ModelTester._print_model_summary(ngram_ranks, model_name="ngram")
+        ModelTester._print_model_summary(rule_ranks, model_name="rule-hmm")
+        ModelTester._print_model_summary(atn_ranks, model_name="atn-hmm")
+        ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
+        # ModelTester._print_model_summary(t100_ranks, model_name="t100-hmm")
+        print()
 
-        # PERFORM ATN HMM LOCATION DETECTION AND FIX RECCOMENDATION
-        atn_ranks = []
-        for (source_path, fix_probs) in map(ModelTester._atn_hmm_locate_and_fix, self.one_error_tokens.items()):
-            eval_stub = self.eval_str[source_path]
-            orig_seq = self.file_to_tokens[source_path]
-            orig_seq_ids = list(
-                map(lambda x: SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x], orig_seq))
-            rank = 1
-            for fix_prob in fix_probs:
-                # unpack
-                new_score, fix_sequence, action, token_idx, to_change_token = fix_prob
-                ModelTester.logger.info("ATN: RANK %d, SUGGEST %s %s AT %d (score: %.2f) %s", rank, action,
-                                        SourceCodeParser.JAVA_TOKEN_ID_MAP[to_change_token], token_idx, new_score, eval_stub)
-                if fix_sequence == orig_seq_ids:
-                    break
-                else:
-                    rank += 1
-            atn_ranks.append(rank)
-
-        ngram_mrr = ModelTester._mean_reciprocal_rank(ngram_ranks)
-        ngram_found = [x for x in ngram_ranks if x <
-                       ModelTester.num_suggestions]
-        print("ngram found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
-            found=len(ngram_found), total=len(ngram_ranks), mrr=ngram_mrr))
-
-        rule_mrr = ModelTester._mean_reciprocal_rank(rule_ranks)
-        rule_found = [x for x in rule_ranks if x < ModelTester.num_suggestions]
-        print("rule-hmm found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
-            found=len(rule_found), total=len(rule_ranks), mrr=rule_mrr))
-
-        atn_mrr = ModelTester._mean_reciprocal_rank(atn_ranks)
-        atn_found = [x for x in atn_ranks if x < ModelTester.num_suggestions]
-        print("atn-hmm found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
-            found=len(atn_found), total=len(atn_ranks), mrr=atn_mrr))
+    @classmethod
+    def init_models(cls):
+        cls.ngram = KenLM10Gram()
+        cls.atn_hmm = ATNJavaTokenHMM()
+        cls.rule_hmm = RuleJavaTokenHMM()
+        cls.t10_hmm = Trained10StateHMM()
+        # cls.t100_hmm = Trained100StateHMM()
