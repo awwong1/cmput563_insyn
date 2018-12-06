@@ -16,6 +16,7 @@ networkx = "*"
 pydot = "*"
 javac-parser = "*"
 pomegranate = "*"
+tables = "*"
 
 [dev-packages]
 pylint = "*"

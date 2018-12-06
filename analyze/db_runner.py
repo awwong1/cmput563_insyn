@@ -2,9 +2,11 @@
 """
 import logging
 import os.path
+import tables
 import sqlite3
 import sys
 import time
+import numpy as np
 from multiprocessing import Pool
 from antlr4 import ParseTreeWalker
 
@@ -44,27 +46,40 @@ class DBRunner:
             (_, tokens) = sc_parser.javac_analyze(source_code)
             int_tokens = list(sc_parser.tokens_to_ints(tokens))
             if (-1) in int_tokens:
-                joined_token_error = ", ".join(map(lambda s: str(s), tokens[int_tokens.index(-1)]))
+                joined_token_error = ", ".join(
+                    map(lambda s: str(s), tokens[int_tokens.index(-1)]))
                 DBRunner.logger.error(
                     "{filehash} contains token error: {token_error}".format(
                         filehash=file_hash, token_error=joined_token_error))
             else:
-                #return " ".join(map(lambda itos: str(itos), int_tokens))
+                # return " ".join(map(lambda itos: str(itos), int_tokens))
                 return " ".join(map(lambda tup: str(tup[0]), tokens))
         except Exception as e:
             DBRunner.logger.error("{filehash} threw {err}".format(
                 filehash=file_hash, err=str(e)))
 
     def tokenize_all_db_source(self, output_type="name"):
+        for token_seq in self.tokenize_all_db_source_gen(output_type=output_type):
+            if output_type == "id":
+                def map_func(name): return str(
+                    SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
+                map_out = map(map_func, token_seq.split())
+                print(" ".join(map_out))
+            else:
+                print(token_seq)
+
+    def tokenize_all_db_source_gen(self, output_type="name", limit=9999999):
         """
         Tokenize all source files, output to stdout (for training ngram)
         Uses stderr for printing progress messages and errors.
         """
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(hash) FROM source_file")
         num_rows = cursor.fetchone()[0]
-        cursor.execute("SELECT hash, source FROM source_file")
+        cursor.execute("SELECT hash, source FROM source_file LIMIT(?)",
+                       (min(limit, num_rows),))
         row_results = cursor.fetchmany()
         counter = 0
         start_time = time.time()
@@ -109,15 +124,40 @@ class DBRunner:
                         if str_tokens:
                             if output_type == "id":
                                 # map name to id
-                                map_func = lambda name: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
+                                def map_func(name): return str(
+                                    SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
                                 map_out = map(map_func, str_tokens.split())
-                                print(" ".join(map_out))
+                                yield list(map_out)
+                            elif output_type == "np_id":
+                                # map name to id
+                                def map_func(name): return str(
+                                    SourceCodeParser.JAVA_TOKEN_TYPE_MAP.get(name, -1))
+                                map_out = map(map_func, str_tokens.split())
+                                yield np.array(list(map_out))
                             else:
                                 # default
-                                print(str_tokens)
+                                yield str_tokens
 
                 all_sql_results = []
         conn.close()
+
+    def create_npy_train_data(self, size=10):
+        # MAX_LEN = 2420215 # known because we tokenized all data once
+        filename = "train_data_size_{}.h5".format(size)
+        h5file = tables.open_file(filename, mode="w")
+        array_c = h5file.create_vlarray(h5file.root, 'data', atom=tables.Int16Atom())
+        # no_pad = []
+
+        for np_arr in self.tokenize_all_db_source_gen(output_type="np_id", limit=size):
+            # cur = np.full((1, MAX_LEN), np.nan)
+            # cur[0][:len(np_arr)] = np_arr
+            # array_c.append(cur)
+            # no_pad.append(np_arr)
+ 
+            array_c.append(np_arr)
+        # np_arrs = np.array(no_pad, dtype=object)
+        h5file.close()
+        print("Saved to {}".format(filename))
 
     def view_one_db_source(self, offset=0):
         """

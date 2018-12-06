@@ -123,7 +123,7 @@ class SourceCodeParser:
         "GTGTEQ": 109,  # GTGTEQ(">>="),
         "GTGTGTEQ": 110,  # GTGTGTEQ(">>>="),
         "MONKEYS_AT": 111,  # MONKEYS_AT("@"),
-        "CUSTOM": 112,  # CUSTOM;
+        # "CUSTOM": 112,  # CUSTOM;
     }
     JAVA_TOKEN_ID_MAP = {
         v: k for k, v in JAVA_TOKEN_TYPE_MAP.items()
