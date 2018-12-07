@@ -5,10 +5,11 @@ import logging
 import fnmatch
 import os
 import random
+import numpy as np
 from multiprocessing import Pool, cpu_count, current_process
 from analyze.parser import SourceCodeParser
 from model.ngram import KenLM10Gram
-from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM, Trained10StateHMM, Trained100StateHMM
+from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM, Trained10StateHMM, Trained100StateHMM, TrainedSmoothStateHMM
 
 
 class ModelTester:
@@ -22,6 +23,7 @@ class ModelTester:
     rule_hmm = None
     t10_hmm = None
     t100_hmm = None
+    tsmooth_hmm = None
 
     pattern = "*.java"
     all_token_types = list(SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())
@@ -207,6 +209,12 @@ class ModelTester:
         return (score, seq_idx)
 
     @staticmethod
+    def _trainsmooth_score(seq_idx_and_test_seq):
+        seq_idx, test_seq = seq_idx_and_test_seq
+        score = ModelTester.tsmooth_hmm.score(test_seq)
+        return (score, seq_idx)
+
+    @staticmethod
     def _hmm_locate_and_fix(source_and_err_tokens, model_name="n/a"):
 
         if model_name == "atn-hmm":
@@ -217,6 +225,8 @@ class ModelTester:
             SCORE_FUNC = ModelTester._train10_score
         elif model_name == "t100-hmm":
             SCORE_FUNC = ModelTester._train100_score
+        elif model_name == "tsmooth-hmm":
+            SCORE_FUNC = ModelTester._trainsmooth_score
         else:
             raise RuntimeError("Model not defined: {}".format(model_name))
 
@@ -252,6 +262,15 @@ class ModelTester:
                     score=contrib_score
                 ))
             token_idx_prob.append((seq_idx, contrib_score))
+
+        # normalize
+        # mean = np.mean([i[1] for i in token_idx_prob])
+        # stdev = np.std([i[1] for i in token_idx_prob])
+        # temp = []
+        # for i in token_idx_prob:
+        #     temp.append((seq_idx, (i[1] - mean) / stdev))
+        # token_idx_prob = temp
+
         token_idx_prob.sort(key=lambda x: x[1])
 
         # RECCOMEND LIKELY FIXES USING THE HMM
@@ -357,6 +376,10 @@ class ModelTester:
         return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="t100-hmm")
 
     @staticmethod
+    def _trainsmooth_hmm_locate_and_fix(source_and_err_tokens):
+        return ModelTester._hmm_locate_and_fix(source_and_err_tokens, model_name="tsmooth-hmm")
+
+    @staticmethod
     def _mean_reciprocal_rank(ranks):
         """
         Take all ranks, calculate meanreciprocal rank.
@@ -449,9 +472,10 @@ class ModelTester:
             ModelTester._ngram_locate_and_fix, "ngram")
         # rule_ranks = self._run_model_evaluation(ModelTester._rule_hmm_locate_and_fix, "rule-hmm")
         # atn_ranks = self._run_model_evaluation(ModelTester._atn_hmm_locate_and_fix, "atn-hmm")
-        t10_ranks = self._run_model_evaluation(
-            ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
+        # t10_ranks = self._run_model_evaluation(
+        #     ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
         # t100_ranks = self._run_model_evaluation(ModelTester._train100_hmm_locate_and_fix, "t100-hmm")
+        tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
 
         # PRINT SUMMARY OF RESULTS AND MODEL PERFORMANCE
         print("\n---- SUMMARY OF CHANGES ----")
@@ -464,8 +488,9 @@ class ModelTester:
         ModelTester._print_model_summary(ngram_ranks, model_name="ngram")
         # ModelTester._print_model_summary(rule_ranks, model_name="rule-hmm")
         # ModelTester._print_model_summary(atn_ranks, model_name="atn-hmm")
-        ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
+        # ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
         # ModelTester._print_model_summary(t100_ranks, model_name="t100-hmm")
+        ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
         print()
 
     @classmethod
@@ -474,4 +499,5 @@ class ModelTester:
         # cls.atn_hmm = ATNJavaTokenHMM()
         # cls.rule_hmm = RuleJavaTokenHMM()
         cls.t10_hmm = Trained10StateHMM()
-        # cls.t100_hmm = Trained100StateHMM()
+        cls.t100_hmm = Trained100StateHMM()
+        cls.tsmooth_hmm = TrainedSmoothStateHMM()

@@ -127,6 +127,26 @@ class Trained100StateHMM:
         return self.model.log_probability(casted_seq)
 
 
+
+class TrainedSmoothStateHMM:
+    logger = logging.getLogger(__name__)
+    FILENAME = "TrainedJavaTokenHMM.1.json"
+
+    def __init__(self):
+        self.logger.info("start initializing tsmooth-HMM")
+        model_as_json = ""
+        path_to_file = os.path.join(os.path.dirname(__file__), self.FILENAME)
+        with open(path_to_file, "r") as f:
+            model_as_json = f.read()
+        self.model = HiddenMarkovModel.from_json(model_as_json)
+        self.logger.info("done initializing tsmooth-HMM")
+
+    def score(self, token_sequence_ids):
+        # trained as str ["0", "1", "2", ... "111"]
+        casted_seq = list(map(lambda x: int(x), token_sequence_ids))
+        return self.model.log_probability(casted_seq)
+
+
 class RuleJavaTokenHMMTrain:
     def __init__(self):
         # train_data = np.load('train_data.npy', mmap_mode='r')
@@ -244,7 +264,10 @@ class TrainedJavaTokenHMM:
             stop_threshold=1e-4,
             name="TrainedJavaTokenHMM",
             n_jobs=-1,  # maximum parallelism
-            callbacks=[ModelCheckpoint(verbose=True)]
+            callbacks=[ModelCheckpoint(verbose=True)],
+            use_pseudocount=True,
+            transition_pseudocount=5,
+            emission_pseudocount=5
         )
 
         print("EVAL TEST SEQUENCE")
