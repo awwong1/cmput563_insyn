@@ -198,7 +198,7 @@ class DBRunner:
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(hash) FROM source_file")
         num_rows = cursor.fetchone()[0]
-        cursor.execute("SELECT hash, source FROM source_file LIMIT(10)")
+        cursor.execute("SELECT hash, source FROM source_file LIMIT(1000)")
         row_results = cursor.fetchmany()
         counter = 0
         start_time = time.time()
