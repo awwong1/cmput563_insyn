@@ -253,22 +253,58 @@ class TrainedJavaTokenHMM:
 
         #train_mat = DBRunner().tokenize_all_db_source_gen(output_type="np_id")
         #train_mat = np.load("train_data_size_1000.npy")
-        table_file = tables.open_file("train_data_size_10000.h5", mode='r')
+
+        trans_mat = np.load("rule_trans.npy")
+        emissions = np.load("rule_em.npy")
+
+        # start only at the first state
+        starts = np.zeros(len(trans_mat))
+        print(trans_mat)
+        starts[0] = 1
+
+        raw_dists = []
+        for emission in emissions:
+            em = DiscreteDistribution(dict(enumerate(emission)))
+            raw_dists.append(em)
+        
+        self.model = HiddenMarkovModel.from_matrix(
+            trans_mat, 
+            raw_dists, 
+            starts,
+            name="TrainedJavaTokenHMM"
+        )
+
+
+
+
+        table_file = tables.open_file("train_data_size_1000000.h5", mode='r')
         train_mat = table_file.root.data
 
-        self.model = HiddenMarkovModel.from_samples(
-            DiscreteDistribution,
-            num_hidden_states,
-            train_mat,
+        self.model.fit(sequences = train_mat, 
+            stop_threshold=1e-5, 
+            algorithm='baum-welch', 
             verbose=True,
-            stop_threshold=1e-4,
-            name="TrainedJavaTokenHMM",
             n_jobs=-1,  # maximum parallelism
             callbacks=[ModelCheckpoint(verbose=True)],
             use_pseudocount=True,
-            transition_pseudocount=5,
-            emission_pseudocount=5
+            transition_pseudocount=100,
+            emission_pseudocount=100
         )
+
+        # self.model = HiddenMarkovModel.from_samples(
+        #     DiscreteDistribution,
+        #     num_hidden_states,
+        #     train_mat,
+        #     verbose=True,
+        #     stop_threshold=1e-6,
+        #     name="TrainedJavaTokenHMM",
+        #     n_jobs=-1,  # maximum parallelism
+        #     callbacks=[ModelCheckpoint(verbose=True)],
+        #     use_pseudocount=True,
+        #     transition_pseudocount=100,
+        #     emission_pseudocount=100,
+        #     end_state=True
+        # )
 
         print("EVAL TEST SEQUENCE")
         input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))
