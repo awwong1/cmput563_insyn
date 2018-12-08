@@ -66,6 +66,11 @@ def main():
         action="store"
     )
     parser.add_argument(
+        "--gen-h5-from-training-data",
+        help="create h5 for tokens, corresponding h5 for rules",
+        action="store_true"
+    )
+    parser.add_argument(
         "--train-hmm",
         help="train an hmm with the specified number of components",
         metavar="num_components",
@@ -108,6 +113,8 @@ def main():
         RuleJavaTokenHMMTrain() 
     elif args.gen_npy_from_training_data:
         DBRunner().create_npy_train_data(args.gen_npy_from_training_data)
+    elif args.gen_h5_from_training_data:
+        DBRunner().tokenize_with_rule_db_sources()
     elif args.train_hmm:
         TrainedJavaTokenHMM(args.train_hmm)
     else:

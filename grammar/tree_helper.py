@@ -77,3 +77,39 @@ class ParseTreeStepper(JavaParserListener):
     def get_literal_rule_sequence(self):
         """return the literal-rule mapping"""
         return list(self.text_rule_sequence)
+
+    def unclean_map_javac_to_antlr(self, javac_token_literal):
+        """
+        merge ('TOKEN_ID', 'literal value'), ('literal value', 'RULE_NAME') arrays
+        this is NOT one to one
+        """
+        copy_javac_tl = list(javac_token_literal)
+        copy_antlr_lt = list(self.text_rule_sequence)
+
+        copy_javac_tl.reverse()
+        copy_antlr_lt.reverse()
+
+        javac_token_to_antlr_rule = []
+        literal_partial = ""
+
+        while len(copy_javac_tl) and len(copy_antlr_lt):
+            (javac_token, javac_literal) = copy_javac_tl.pop()
+            (antlr_literal, antlr_rule) = copy_antlr_lt.pop()
+            # print(javac_literal, antlr_literal, javac_literal == antlr_literal)
+            if javac_literal == antlr_literal:
+                # great, base case, we done
+                javac_token_to_antlr_rule.append((javac_token, antlr_rule,))
+                literal_partial = ""
+            elif javac_literal == "" and antlr_literal == "<EOF>":
+                javac_token_to_antlr_rule.append((javac_token, antlr_rule,))
+                literal_partial = ""
+            elif javac_literal == literal_partial + antlr_literal:
+                # constructed literals are okay too
+                javac_token_to_antlr_rule.append((javac_token, antlr_rule))
+                literal_partial = ""
+            else:
+                # stupid ">" ">>" cases
+                literal_partial += antlr_literal
+                copy_javac_tl.append((javac_token, javac_literal,))
+
+        return javac_token_to_antlr_rule
