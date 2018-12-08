@@ -11,6 +11,7 @@ from pomegranate.callbacks import ModelCheckpoint
 from analyze.db_runner import DBRunner
 
 from analyze.parser import SourceCodeParser
+from grammar.JavaParser import JavaParser
 
 TEST_SEQ = "33 1 72 1 72 1 70 26 1 72 1 72 1 70 26 1 72 1 72 1 70 36 10 1 18 1 76 1 75 66 36 1 64 65 66 41 64 1 72 10 65 70 67 67 0"
 
@@ -284,16 +285,21 @@ class LabelTrainedJavaTokenHMM:
         rules_file = tables.open_file("rule_sequences.h5", mode="r")
         rules_mat = rules_file.root.data
 
+        print(tokens_mat[0])
+        print(rules_mat[0])
+        state_names = range(0, len(JavaParser.ruleNames))
+
         self.model = HiddenMarkovModel.from_samples(
             DiscreteDistribution,
-            num_hidden_states,
+            len(JavaParser.ruleNames),
             tokens_mat,
             verbose=True,
             algorithm="labeled",
             labels=rules_mat,
+            state_names=state_names,
             stop_threshold=1e-4,
             name="LabelTrainedJaveTokenHMM",
-            n_jobs=-1,  # maximum parallelism
+            n_jobs=1,  # maximum parallelism
             callbacks=[ModelCheckpoint(verbose=True)],
         )
 

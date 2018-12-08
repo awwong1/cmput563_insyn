@@ -176,22 +176,16 @@ class DBRunner:
         conn.close()
 
     def tokenize_with_rule_db_sources(self):
-
-        max_token_size = max(
-            list(map(lambda x: len(x), SourceCodeParser.JAVA_TOKEN_TYPE_MAP.keys())))
-
         token_seq_filename = "token_sequences.h5"
         token_seq_file = tables.open_file(token_seq_filename, mode="w")
         token_file_array = token_seq_file.create_vlarray(
-            token_seq_file.root, "data", atom=tables.StringAtom(max_token_size)
+            token_seq_file.root, "data", atom=tables.Int16Atom()
         )
-
-        max_rule_size = max(map(lambda x: len(x), JavaParser.ruleNames))
 
         rule_seq_filename = "rule_sequences.h5"
         rule_seq_file = tables.open_file(rule_seq_filename, mode="w")
         rule_file_array = rule_seq_file.create_vlarray(
-            rule_seq_file.root, "data", atom=tables.StringAtom(max_rule_size)
+            rule_seq_file.root, "data", atom=tables.Int16Atom()
         )
 
         conn = sqlite3.connect(self.db_path)
