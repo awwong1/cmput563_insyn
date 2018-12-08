@@ -76,4 +76,4 @@ class ParseTreeStepper(JavaParserListener):
 
     def get_literal_rule_sequence(self):
         """return the literal-rule mapping"""
-        return list(self._rule_stack)
+        return list(self.text_rule_sequence)

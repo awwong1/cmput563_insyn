@@ -15,6 +15,44 @@ public class HelloWorld {
 }
 """
 
+
+def unclean_map_javac_to_antlr(javac_token_literal, antlr_literal_rule):
+    """
+    merge ('TOKEN_ID', 'literal value'), ('literal value', 'RULE_NAME') arrays
+    this is NOT one to one
+    """
+    copy_javac_tl = list(javac_token_literal)
+    copy_antlr_lt = list(antlr_literal_rule)
+
+    copy_javac_tl.reverse()
+    copy_antlr_lt.reverse()
+
+    javac_token_to_antlr_rule = []
+    literal_partial = ""
+
+    while len(copy_javac_tl) and len(copy_antlr_lt):
+        (javac_token, javac_literal) = copy_javac_tl.pop()
+        (antlr_literal, antlr_rule) = copy_antlr_lt.pop()
+        # print(javac_literal, antlr_literal, javac_literal == antlr_literal)
+        if javac_literal == antlr_literal:
+            # great, base case, we done
+            javac_token_to_antlr_rule.append((javac_token, antlr_rule,))
+            literal_partial = ""
+        elif javac_literal == "" and antlr_literal == "<EOF>":
+            javac_token_to_antlr_rule.append((javac_token, antlr_rule,))
+            literal_partial = ""
+        elif javac_literal == literal_partial + antlr_literal:
+            # constructed literals are okay too
+            javac_token_to_antlr_rule.append((javac_token, antlr_rule))
+            literal_partial = ""
+        else:
+            # stupid ">" ">>" cases
+            literal_partial += antlr_literal
+            copy_javac_tl.append((javac_token, javac_literal,))
+
+    return javac_token_to_antlr_rule
+
+
 (javac_num_errors, javac_token_sequence) = SourceCodeParser().javac_analyze(TEST_SRC)
 
 # hmm wants [0, 1, 2, ..., 111]
@@ -32,21 +70,29 @@ str_antlr_tokens = map(
         # tree.parser.symbolicNames[antlr_token.type]
         antlr_token.text
     ), antlr_tokens)
-print(" ".join(list(str_antlr_tokens)))
+# print(" ".join(list(str_antlr_tokens)))
 printer = ParseTreeStepper(False)
 walker = ParseTreeWalker()
 walker.walk(printer, tree)
-print(printer.get_literal_rule_sequence())
+antlr_literal_to_rule = printer.get_literal_rule_sequence()
+# print(antlr_literal_to_rule)
 
 print("======= JAVAC TOKENS =======")
 print("JAVAC NUM ERRORS FOUND: {}".format(javac_num_errors))
 # print(list(zip(input_for_ngram, input_for_hmm)))
 # print(" ".join(input_for_ngram))
-print(" ".join(list(map(lambda x: x[1], javac_token_sequence))))
+javac_token_to_literal = list(
+    map(lambda x: (x[0], x[1]), javac_token_sequence))
+# print(javac_token_to_literal)
+
+print("======= UNCLEAN MAP =======")
+token_to_rule = unclean_map_javac_to_antlr(javac_token_to_literal, antlr_literal_to_rule)
+
+print(token_to_rule)
 
 print("======= MODEL EVAL =======")
 MODELS = {
-    #"10-gram": KenLM10Gram(),
+    # "10-gram": KenLM10Gram(),
     # "10-hmm": Trained10StateHMM(),
     # "100-hmm": Trained100StateHMM(),
     # "atn-hmm": ATNJavaTokenHMM()
