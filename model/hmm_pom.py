@@ -253,7 +253,7 @@ class TrainedJavaTokenHMM:
 
         #train_mat = DBRunner().tokenize_all_db_source_gen(output_type="np_id")
         #train_mat = np.load("train_data_size_1000.npy")
-        table_file = tables.open_file("train_data_size_10000.h5", mode='r')
+        table_file = tables.open_file("train_data_size_3000000.h5", mode='r')
         train_mat = table_file.root.data
 
         self.model = HiddenMarkovModel.from_samples(
@@ -261,13 +261,11 @@ class TrainedJavaTokenHMM:
             num_hidden_states,
             train_mat,
             verbose=True,
+            algorithm="viterbi",
             stop_threshold=1e-4,
             name="TrainedJavaTokenHMM",
             n_jobs=-1,  # maximum parallelism
             callbacks=[ModelCheckpoint(verbose=True)],
-            use_pseudocount=True,
-            transition_pseudocount=5,
-            emission_pseudocount=5
         )
 
         print("EVAL TEST SEQUENCE")
