@@ -285,18 +285,22 @@ class LabelTrainedJavaTokenHMM:
         rules_file = tables.open_file("rule_sequences.h5", mode="r")
         rules_mat = rules_file.root.data
 
+        tokens_mat = np.array(tokens_mat)
+        rules_mat = np.array(rules_mat)
+
         print(tokens_mat[0])
         print(rules_mat[0])
         state_names = range(0, len(JavaParser.ruleNames))
+        state_names = range(0, num_hidden_states)
 
         self.model = HiddenMarkovModel.from_samples(
             DiscreteDistribution,
-            len(JavaParser.ruleNames),
+            # len(JavaParser.ruleNames),
+            num_hidden_states,
             tokens_mat,
             verbose=True,
             algorithm="labeled",
             labels=rules_mat,
-            state_names=state_names,
             stop_threshold=1e-4,
             name="LabelTrainedJaveTokenHMM",
             n_jobs=1,  # maximum parallelism

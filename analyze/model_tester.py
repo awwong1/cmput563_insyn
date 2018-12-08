@@ -499,7 +499,7 @@ class ModelTester:
         # atn_ranks = self._run_model_evaluation(ModelTester._atn_hmm_locate_and_fix, "atn-hmm")
         # t10_ranks = self._run_model_evaluation(ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
         # t100_ranks = self._run_model_evaluation(ModelTester._train100_hmm_locate_and_fix, "t100-hmm")
-        # tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
+        tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
 
         # PRINT SUMMARY OF RESULTS AND MODEL PERFORMANCE
         print("\n---- SUMMARY OF CHANGES ----")
@@ -515,7 +515,7 @@ class ModelTester:
         # ModelTester._print_model_summary(atn_ranks, model_name="atn-hmm")
         # ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
         # ModelTester._print_model_summary(t100_ranks, model_name="t100-hmm")
-        # ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
+        ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
         print()
 
     @classmethod
@@ -526,4 +526,4 @@ class ModelTester:
         # cls.rule_hmm = RuleJavaTokenHMM()
         # cls.t10_hmm = Trained10StateHMM()
         # cls.t100_hmm = Trained100StateHMM()
-        # cls.tsmooth_hmm = TrainedSmoothStateHMM()
+        cls.tsmooth_hmm = TrainedSmoothStateHMM()
