@@ -8,7 +8,7 @@ import random
 import numpy as np
 from multiprocessing import Pool, cpu_count, current_process
 from analyze.parser import SourceCodeParser
-from model.ngram import KenLM10Gram
+from model.ngram import KenLM10Gram, KenLM2Gram
 from model.hmm_pom import ATNJavaTokenHMM, RuleJavaTokenHMM, Trained10StateHMM, Trained100StateHMM, TrainedSmoothStateHMM
 
 
@@ -18,7 +18,8 @@ class ModelTester:
     then use the ngram to suggest fix.
     """
     logger = logging.getLogger(__name__)
-    ngram = None  # set in a class method call
+    n10_gram = None  # set in a class method call
+    n2_gram = None
     atn_hmm = None
     rule_hmm = None
     t10_hmm = None
@@ -105,25 +106,36 @@ class ModelTester:
             token = rand_token
         return (source_path, original_tokens, test_tokens, change_type, change_idx, token)
 
+    # ============================
+    # NGRAM RELATED STATIC METHODS
+    # ============================
+
     @staticmethod
-    def _ngram_locate_and_fix(source_and_err_tokens):
+    def _ngram_locate_and_fix(source_and_err_tokens, model_name="n/a"):
+
+        if model_name == "n10_gram":
+            ngram_model = ModelTester.n10_gram
+        elif model_name == "n2_gram":
+            ngram_model = ModelTester.n2_gram
+        else:
+            raise RuntimeError("Model not defined: {}".format(model_name))
+
         # LOCATE
         (source_path, test_tokens) = source_and_err_tokens  # unpack the dict item
         str_test_tokens = " ".join(test_tokens)
         counter = 0  # counter will go to full length of test_tokens due to </s>
         accum_score = 0
-
         token_idx_prob = []
-
-        for prob, ngram_len, _ in ModelTester.ngram.full_scores(str_test_tokens):
+        for prob, ngram_len, _ in ngram_model.full_scores(str_test_tokens):
             accum_score += prob
             ModelTester.logger.debug(
-                "{path}: LOCATE_ERROR_SCORE {score} ({counter} of {total}) ngram={ngram_len}".format(
+                "{path}: LOCATE_ERROR_SCORE {score} ({counter} of {total}) ngram={ngram_len} [{model_name}]".format(
                     path=source_path,
                     score=accum_score,
                     counter=counter,
                     total=len(test_tokens),
-                    ngram_len=ngram_len
+                    ngram_len=ngram_len,
+                    model_name=model_name
                 ))
             token_idx_prob.append((counter, prob,))
             counter += 1
@@ -133,10 +145,11 @@ class ModelTester:
         # For the most likely error locations, try add, mod, and delete
         for token_idx, score in token_idx_prob[:ModelTester.try_num_locations]:
             ModelTester.logger.info(
-                "{path}: CHECKING_LOCATION {token_idx} ({score})".format(
+                "{path}: CHECKING_LOCATION {token_idx} ({score}) [{model_name}]".format(
                     path=source_path,
                     token_idx=token_idx,
-                    score=score
+                    score=score,
+                    model_name=model_name
                 ))
             if token_idx == len(test_tokens):
                 # edge case, we cannot modify or delete </s>, only add to end of sequence
@@ -144,7 +157,7 @@ class ModelTester:
                     fix_tokens_by_add = test_tokens.copy()
                     fix_tokens_by_add.append(add_token)
                     str_fix_by_add_tokens = " ".join(fix_tokens_by_add)
-                    new_score_by_add = ModelTester.ngram.score(
+                    new_score_by_add = ngram_model.score(
                         str_fix_by_add_tokens)
                     fix_prob.append(
                         (new_score_by_add, fix_tokens_by_add, "ADD", token_idx, add_token))
@@ -156,7 +169,7 @@ class ModelTester:
                 fix_tokens_by_add = test_tokens.copy()
                 fix_tokens_by_add.insert(token_idx, add_token)
                 str_fix_by_add_tokens = " ".join(fix_tokens_by_add)
-                new_score_by_add = ModelTester.ngram.score(
+                new_score_by_add = ngram_model.score(
                     str_fix_by_add_tokens)
                 fix_prob.append(
                     (new_score_by_add, fix_tokens_by_add, "ADD", token_idx, add_token))
@@ -168,7 +181,7 @@ class ModelTester:
                 fix_tokens_by_mod = test_tokens.copy()
                 fix_tokens_by_mod[token_idx] = mod_token
                 str_fix_by_mod_tokens = " ".join(fix_tokens_by_mod)
-                new_score_by_mod = ModelTester.ngram.score(
+                new_score_by_mod = ngram_model.score(
                     str_fix_by_mod_tokens)
                 fix_prob.append(
                     (new_score_by_mod, fix_tokens_by_mod, "MOD", token_idx, mod_token))
@@ -177,12 +190,25 @@ class ModelTester:
             fix_tokens_by_del = test_tokens.copy()
             fix_tokens_by_del.pop(token_idx)
             str_fix_by_del_tokens = " ".join(fix_tokens_by_del)
-            new_score_by_del = ModelTester.ngram.score(str_fix_by_del_tokens)
+            new_score_by_del = ngram_model.score(str_fix_by_del_tokens)
             fix_prob.append(
                 (new_score_by_del, fix_tokens_by_del, "DEL", token_idx, to_change_token))
 
         fix_prob.sort(key=lambda x: x[0], reverse=True)
         return (source_path, fix_prob)
+
+    @staticmethod
+    def _10_gram_locate_and_fix(source_and_err_tokens):
+        return ModelTester._ngram_locate_and_fix(source_and_err_tokens, "n10_gram")
+
+    @staticmethod
+    def _2_gram_locate_and_fix(source_and_err_tokens):
+        return ModelTester._ngram_locate_and_fix(source_and_err_tokens, "n2_gram")
+
+
+    # ============================
+    # HMM RELATED STATIC METHODS
+    # ============================
 
     @staticmethod
     def _atn_score(seq_idx_and_test_seq):
@@ -437,7 +463,6 @@ class ModelTester:
         model_ranks = []
         with Pool() as pool:
             for (source_path, fix_probs) in pool.imap(loc_and_fix_func, self.one_error_tokens.items()):
-                eval_stub = self.eval_str[source_path]
                 orig_seq = self.file_to_tokens[source_path]
                 rank = 1
                 for fix_prob in fix_probs:
@@ -468,14 +493,13 @@ class ModelTester:
                 self.eval_str[source_path] = eval_str
 
         # PERFORM PROBABALISTIC LOCATION DETECTION AND FIX RECCOMENDATION
-        ngram_ranks = self._run_model_evaluation(
-            ModelTester._ngram_locate_and_fix, "ngram")
+        n10gram_ranks = self._run_model_evaluation(ModelTester._10_gram_locate_and_fix, "n10_gram")
+        n2gram_ranks = self._run_model_evaluation(ModelTester._2_gram_locate_and_fix, "n2_gram")
         # rule_ranks = self._run_model_evaluation(ModelTester._rule_hmm_locate_and_fix, "rule-hmm")
         # atn_ranks = self._run_model_evaluation(ModelTester._atn_hmm_locate_and_fix, "atn-hmm")
-        # t10_ranks = self._run_model_evaluation(
-        #     ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
+        # t10_ranks = self._run_model_evaluation(ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
         # t100_ranks = self._run_model_evaluation(ModelTester._train100_hmm_locate_and_fix, "t100-hmm")
-        tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
+        # tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
 
         # PRINT SUMMARY OF RESULTS AND MODEL PERFORMANCE
         print("\n---- SUMMARY OF CHANGES ----")
@@ -485,19 +509,21 @@ class ModelTester:
                 eval_str=eval_str
             ))
         print("\n---- MODEL PERFORMANCE ----")
-        ModelTester._print_model_summary(ngram_ranks, model_name="ngram")
+        ModelTester._print_model_summary(n10gram_ranks, model_name="n10_gram")
+        ModelTester._print_model_summary(n2gram_ranks, model_name="n2_gram")
         # ModelTester._print_model_summary(rule_ranks, model_name="rule-hmm")
         # ModelTester._print_model_summary(atn_ranks, model_name="atn-hmm")
         # ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
         # ModelTester._print_model_summary(t100_ranks, model_name="t100-hmm")
-        ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
+        # ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
         print()
 
     @classmethod
     def init_models(cls):
-        cls.ngram = KenLM10Gram()
+        cls.n10_gram = KenLM10Gram()
+        cls.n2_gram = KenLM2Gram()
         # cls.atn_hmm = ATNJavaTokenHMM()
         # cls.rule_hmm = RuleJavaTokenHMM()
-        cls.t10_hmm = Trained10StateHMM()
-        cls.t100_hmm = Trained100StateHMM()
-        cls.tsmooth_hmm = TrainedSmoothStateHMM()
+        # cls.t10_hmm = Trained10StateHMM()
+        # cls.t100_hmm = Trained100StateHMM()
+        # cls.tsmooth_hmm = TrainedSmoothStateHMM()

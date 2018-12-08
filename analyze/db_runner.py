@@ -11,7 +11,6 @@ from multiprocessing import Pool
 from antlr4 import ParseTreeWalker
 
 from analyze.parser import SourceCodeParser
-from model.ngram import KenLM10Gram
 from grammar.tree_helper import ParseTreeStepper
 
 

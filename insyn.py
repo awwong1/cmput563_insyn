@@ -8,7 +8,6 @@ from argparse import ArgumentParser, SUPPRESS
 
 from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
-from analyze.ngram_tester import NGramTester
 from analyze.model_tester import ModelTester
 from grammar.structure import StructureBuilder
 from model.hmm_pom import RuleJavaTokenHMMTrain, TrainedJavaTokenHMM
@@ -24,12 +23,6 @@ def main():
         help="set logging verbosity",
         metavar="level",
         default="warning"
-    )
-    parser.add_argument(
-        "--test-ngram-model",
-        help="read java code, change random token, list suggestions",
-        metavar="file|dir",
-        action="store"
     )
     parser.add_argument(
         "--sample-parse",
@@ -94,9 +87,6 @@ def main():
 
     if hasattr(args, "sample_parse"):
         DBRunner().view_one_db_source(args.sample_parse or 0)
-    elif args.test_ngram_model:
-        NGramTester.init_ngram()
-        NGramTester(args.test_ngram_model).run_evaluation()
     elif args.generate_structure:
         struct_builder = StructureBuilder()
         print("Building ATN transition and emissions...")

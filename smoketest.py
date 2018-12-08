@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-from model.hmm_pom import Trained10StateHMM, Trained100StateHMM
+from model.hmm_pom import Trained10StateHMM, Trained100StateHMM, ATNJavaTokenHMM
 from model.ngram import KenLM10Gram
 from analyze.parser import SourceCodeParser
 
 TEST_SRC = """
 public class HelloWorld {
     public static void main(String[] args) {
-        System.out.println("Hello, world!");
+        1 System.out.println("Hello, world!");
     }
 }
 """
@@ -22,18 +22,21 @@ print("======= SOURCE INPUT =======")
 print(TEST_SRC)
 print("======= JAVAC TOKENS =======")
 print("JAVAC NUM ERRORS FOUND: {}".format(num_errors))
-print(list(zip(input_for_ngram, input_for_hmm)))
+# print(list(zip(input_for_ngram, input_for_hmm)))
+print(" ".join(input_for_ngram))
 
 print("======= MODEL EVAL =======")
 MODELS = {
     "10-gram": KenLM10Gram(),
     "10-hmm": Trained10StateHMM(),
-    # "100-hmm": Trained100StateHMM()
+    # "100-hmm": Trained100StateHMM(),
+    "atn-hmm": ATNJavaTokenHMM()
 }
 SCORES = {
     "10-gram": 0,
     "10-hmm": 0,
-    "100-hmm": 0
+    "100-hmm": 0,
+    "atn-hmm": 0
 }
 
 header_1 = "seq\t| \t\t|"
