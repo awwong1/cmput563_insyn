@@ -144,7 +144,8 @@ class DBRunner:
         # MAX_LEN = 2420215 # known because we tokenized all data once
         filename = "train_data_size_{}.h5".format(size)
         h5file = tables.open_file(filename, mode="w")
-        array_c = h5file.create_vlarray(h5file.root, 'data', atom=tables.Int16Atom())
+        array_c = h5file.create_vlarray(
+            h5file.root, 'data', atom=tables.Int16Atom())
         # no_pad = []
 
         for np_arr in self.tokenize_all_db_source_gen(output_type="np_id", limit=size):
@@ -152,7 +153,7 @@ class DBRunner:
             # cur[0][:len(np_arr)] = np_arr
             # array_c.append(cur)
             # no_pad.append(np_arr)
- 
+
             array_c.append(np_arr)
         # np_arrs = np.array(no_pad, dtype=object)
         h5file.close()
@@ -192,13 +193,17 @@ class DBRunner:
 
             print("---- ANTLR TOKENS ----")
             str_antlr_tokens = map(lambda antlr_token: (
-                tree.parser.symbolicNames[antlr_token.type], antlr_token.text), antlr_tokens)
+                tree.parser.symbolicNames[antlr_token.type],
+                # antlr_token.text
+            ), antlr_tokens)
             print(list(str_antlr_tokens))
             print()
 
             print("---- JAVAC TOKENS ----")
             str_javac_tokens = map(lambda javac_token: (
-                javac_token[0], javac_token[1]), javac_tokens)
+                javac_token[0],
+                # javac_token[1]
+            ), javac_tokens)
             print(list(str_javac_tokens))
             print()
 
