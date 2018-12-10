@@ -192,13 +192,16 @@ class DBRunner:
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(hash) FROM source_file")
         num_rows = cursor.fetchone()[0]
-        cursor.execute("SELECT hash, source FROM source_file LIMIT(1100000)")
+        cursor.execute("SELECT hash, source FROM source_file LIMIT(2200000)")
         row_results = cursor.fetchmany()
         counter = 0
         start_time = time.time()
         all_sql_results = []
         while row_results:
             for row_result in row_results:
+                if counter > 620000 and counter < 680000: 
+                    counter = counter + 1
+                    continue
                 all_sql_results.append(row_result)
                 if not counter % 2500:
                     elapsed_time = time.time() - start_time
@@ -236,7 +239,7 @@ class DBRunner:
                         tokenize_counter += 1
                         if token_types_to_rules:
                             token_types = list(map(lambda x: x[0], token_types_to_rules))
-                            rule_names = list(map(lambda x: x[1], token_types_to_rules))
+                            rule_names = list(map(lambda x: str(x[1]), token_types_to_rules))
                             token_file_array.append(np.array(token_types))
                             rule_file_array.append(np.array(rule_names))
                 all_sql_results = []

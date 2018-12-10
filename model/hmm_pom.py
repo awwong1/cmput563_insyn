@@ -6,7 +6,7 @@ import os
 import tables
 import numpy as np
 import logging
-from pomegranate import HiddenMarkovModel, DiscreteDistribution
+from pomegranate import HiddenMarkovModel, DiscreteDistribution, State
 from pomegranate.callbacks import ModelCheckpoint
 from analyze.db_runner import DBRunner
 
@@ -285,25 +285,52 @@ class LabelTrainedJavaTokenHMM:
         rules_file = tables.open_file("rule_sequences.h5", mode="r")
         rules_mat = rules_file.root.data
 
-        tokens_mat = np.array(tokens_mat)
-        rules_mat = np.array(rules_mat)
+        print("Data Read")
+        tokens_mat = tokens_mat[0:100000]
+        rules_mat = rules_mat[0:100000]
 
         print(tokens_mat[0])
         print(rules_mat[0])
-        state_names = range(0, len(JavaParser.ruleNames))
-        state_names = range(0, num_hidden_states)
+
+        print("State names")
+        rules_list = []
+        for i in rules_mat:
+            rules_list = list(set(rules_list + i.tolist()))
+        rules_list = list(set(rules_list))
+
+        print("Rule formatting")
+        temp = []
+        for i in rules_mat:
+            temp2 = []
+            for j in i:
+                temp2.append(str(j))
+            temp.append(temp2)
+
+        rules_mat = temp
+
+        print("To NP")
+        tokens_mat = np.array(tokens_mat)
+        # rules_mat = np.array(rules_mat)
+
+
+        print("Training")
 
         self.model = HiddenMarkovModel.from_samples(
             DiscreteDistribution,
-            # len(JavaParser.ruleNames),
-            num_hidden_states,
+            len(rules_list),
+            # num_hidden_states,
             tokens_mat,
             verbose=True,
             algorithm="labeled",
             labels=rules_mat,
+            # labels=temp,
+            state_names=[str(i) for i in rules_list],
+            pseudocount=10,
+            use_pseudocount=True,
             stop_threshold=1e-4,
             name="LabelTrainedJaveTokenHMM",
-            n_jobs=1,  # maximum parallelism
+            batch_size=1000,
+            n_jobs=-1,  # maximum parallelism
             callbacks=[ModelCheckpoint(verbose=True)],
         )
 
