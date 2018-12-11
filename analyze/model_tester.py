@@ -489,6 +489,7 @@ class ModelTester:
         with Pool() as pool:
             for (source_path, fix_probs) in pool.imap(loc_and_fix_func, self.one_error_tokens.items()):
                 orig_seq = self.file_to_tokens[source_path]
+                org_ints = list(map(lambda x: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x]), self.file_to_tokens[source_path]))
                 rank = 1
                 for fix_prob in fix_probs:
                     # unpack
@@ -496,7 +497,7 @@ class ModelTester:
                     ModelTester.logger.info("%s: RANK %d SUGGEST %s %s AT %d (score: %.2f)",
                                             model_name, rank, action,
                                             to_change_token, token_idx, new_score)
-                    if fix_sequence == orig_seq:
+                    if fix_sequence == orig_seq or fix_sequence == org_ints:
                         break
                     else:
                         rank += 1
