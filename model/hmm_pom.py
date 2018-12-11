@@ -6,6 +6,7 @@ import os
 import tables
 import numpy as np
 import logging
+import json
 from pomegranate import HiddenMarkovModel, DiscreteDistribution, State
 from pomegranate.callbacks import ModelCheckpoint
 from analyze.db_runner import DBRunner
@@ -15,6 +16,7 @@ from grammar.JavaParser import JavaParser
 
 TEST_SEQ = "33 1 72 1 72 1 70 26 1 72 1 72 1 70 26 1 72 1 72 1 70 36 10 1 18 1 76 1 75 66 36 1 64 65 66 41 64 1 72 10 65 70 67 67 0"
 
+TRAINED_TRANS_MAT = "trained_trans_mat.npy"
 
 class ATNJavaTokenHMM:
     """
@@ -131,16 +133,27 @@ class Trained100StateHMM:
 
 class TrainedSmoothStateHMM:
     logger = logging.getLogger(__name__)
-    FILENAME = "TrainedJavaTokenHMM.1.json"
+    FILENAME = "LabelTrainedJaveTokenHMM.1.json"
+
 
     def __init__(self):
         self.logger.info("start initializing tsmooth-HMM")
-        model_as_json = ""
-        path_to_file = os.path.join(os.path.dirname(__file__), self.FILENAME)
-        with open(path_to_file, "r") as f:
-            model_as_json = f.read()
-        self.model = HiddenMarkovModel.from_json(model_as_json)
+        # model_as_json = ""
+        # path_to_file = os.path.join(os.path.dirname(__file__), self.FILENAME)
+        # with open(path_to_file, "r") as f:
+        #     model_as_json = f.read()
+        # self.model = HiddenMarkovModel.from_json(model_as_json)
+
+        # Read back as json
+        temp_mat = np.load(TRAINED_TRANS_MAT)
+        distributions, names, start_dist = _get_model_json_data(self.FILENAME)
+        self.model = HiddenMarkovModel.from_matrix(
+            temp_mat,
+            distributions,
+            start_dist,
+        )
         self.logger.info("done initializing tsmooth-HMM")
+
 
     def score(self, token_sequence_ids):
         # trained as str ["0", "1", "2", ... "111"]
@@ -278,16 +291,43 @@ class TrainedJavaTokenHMM:
             print()
         print('Done.')
 
+
+def _get_model_json_data(json_name):
+    with open(json_name, 'r') as f:
+        model_json = json.load(f)
+
+    distributions = []
+    names = []
+    model_states = model_json['states']
+    for model_state in model_states:
+        names.append(model_state['name'])
+        state_dist = model_state['distribution']
+        if state_dist is not None:
+            params = state_dist['parameters'][0]
+            dist_dict = {}
+            for k,v in params.items():
+                dist_dict[int(k)] = float(v)
+
+        distributions.append(DiscreteDistribution(dist_dict))
+    
+    start_index = int(model_json["start_index"])
+    start_dist = [1 if int(state) == start_index else 0 for state in names[:-2]]
+
+    return distributions, names, start_dist
+
+
+
 class LabelTrainedJavaTokenHMM:
     def __init__(self, num_hidden_states):
+        # _get_model_json_data()
         tokens_file = tables.open_file("token_sequences.h5", mode='r')
         tokens_mat = tokens_file.root.data
         rules_file = tables.open_file("rule_sequences.h5", mode="r")
         rules_mat = rules_file.root.data
 
         print("Data Read")
-        tokens_mat = tokens_mat[0:100000]
-        rules_mat = rules_mat[0:100000]
+        tokens_mat = tokens_mat[0:500000]
+        rules_mat = rules_mat[0:500000]
 
         print(tokens_mat[0])
         print(rules_mat[0])
@@ -333,6 +373,10 @@ class LabelTrainedJavaTokenHMM:
             n_jobs=-1,  # maximum parallelism
             callbacks=[ModelCheckpoint(verbose=True)],
         )
+
+        # Save data
+        np.save(TRAINED_TRANS_MAT, self.model.dense_transition_matrix())
+
 
         print("EVAL TEST SEQUENCE")
         input_tokens = list(map(lambda x: int(x), TEST_SEQ.split()))

@@ -33,6 +33,15 @@ class ModelTester:
     try_num_locations = 10  # How many locations do we try?
     num_suggestions = 1000  # How many suggestions do we reveal?
 
+    if "CONST" in all_token_types:
+        idx = all_token_types.index("CONST")
+        all_token_types.remove("CONST")
+        del all_token_type_ids[idx]
+    if "GOTO" in all_token_types:
+        idx = all_token_types.index("GOTO")
+        all_token_types.remove("GOTO")
+        del all_token_type_ids[idx]
+
     @staticmethod
     def _get_first(tup):
         """multiprocessing fails if lambad function exists within the target
@@ -82,6 +91,14 @@ class ModelTester:
                 add_token_types.remove("CUSTOM")
             if "EOF" in add_token_types:
                 add_token_types.remove("EOF")
+
+            # ---Jake Test
+            if "CONST" in add_token_types:
+                add_token_types.remove("CONST")
+            if "GOTO" in add_token_types:
+                add_token_types.remove("GOTO")
+            # ---Jake Test
+
             rand_token = random.choice(add_token_types)
             test_tokens.insert(change_idx, rand_token)
             ModelTester.logger.info("{}: BREAK by {} {} at {}".format(source_path,
@@ -98,6 +115,14 @@ class ModelTester:
                 sub_token_types.remove("CUSTOM")
             if "EOF" in sub_token_types:
                 sub_token_types.remove("EOF")
+
+            # ---Jake Test
+            if "CONST" in sub_token_types:
+                sub_token_types.remove("CONST")
+            if "GOTO" in sub_token_types:
+                sub_token_types.remove("GOTO")
+            # ---Jake Test
+
             rand_token = random.choice(sub_token_types)
             test_tokens[change_idx] = rand_token
             ModelTester.logger.info("{}: BREAK by {} from {} to {} at {}".format(
@@ -527,3 +552,4 @@ class ModelTester:
         # cls.t10_hmm = Trained10StateHMM()
         # cls.t100_hmm = Trained100StateHMM()
         cls.tsmooth_hmm = TrainedSmoothStateHMM()
+
