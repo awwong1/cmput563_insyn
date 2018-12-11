@@ -446,6 +446,7 @@ class ModelTester:
         print("{name} found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
             name=model_name,
             found=len(model_found), total=len(rank_list), mrr=mrr))
+        print(rank_list)
 
     def __init__(self, input_file_path):
         """
