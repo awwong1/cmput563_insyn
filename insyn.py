@@ -10,7 +10,7 @@ from analyze.db_runner import DBRunner
 from analyze.parser import SourceCodeParser
 from analyze.model_tester import ModelTester
 from grammar.structure import StructureBuilder
-from model.hmm_pom import RuleJavaTokenHMMTrain, TrainedJavaTokenHMM
+from model.hmm_pom import RuleJavaTokenHMMTrain, TrainedJavaTokenHMM, LabelTrainedJavaTokenHMM
 
 
 def main():
@@ -52,11 +52,11 @@ def main():
         action="store"
 
     )
-    parser.add_argument( 
-        "--test-rule-hmm-model-train", 
+    parser.add_argument(
+        "--test-rule-hmm-model-train",
         help="read java code, change random token, list suggestions",
-        metavar="file|dir", 
-        action="store" 
+        metavar="file|dir",
+        action="store"
     )
     parser.add_argument(
         "--gen-npy-from-training-data",
@@ -64,6 +64,11 @@ def main():
         type=int,
         metavar="size",
         action="store"
+    )
+    parser.add_argument(
+        "--gen-h5-from-training-data",
+        help="create h5 for tokens, corresponding h5 for rules",
+        action="store_true"
     )
     parser.add_argument(
         "--train-hmm",
@@ -104,12 +109,15 @@ def main():
     elif args.evaluate_all_models:
         ModelTester.init_models()
         ModelTester(args.evaluate_all_models).run_evaluation()
-    elif args.test_rule_hmm_model_train: 
-        RuleJavaTokenHMMTrain() 
+    elif args.test_rule_hmm_model_train:
+        RuleJavaTokenHMMTrain()
     elif args.gen_npy_from_training_data:
         DBRunner().create_npy_train_data(args.gen_npy_from_training_data)
+    elif args.gen_h5_from_training_data:
+        DBRunner().tokenize_with_rule_db_sources()
     elif args.train_hmm:
-        TrainedJavaTokenHMM(args.train_hmm)
+        # TrainedJavaTokenHMM(args.train_hmm)
+        LabelTrainedJavaTokenHMM(args.train_hmm)
     else:
         parser.print_help()
 

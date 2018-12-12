@@ -1,4 +1,3 @@
-// modification of JavaParser to work with Javac outputted tokens
 /*
  [The "BSD licence"]
  Copyright (c) 2013 Terence Parr, Sam Harwell
@@ -75,7 +74,7 @@ variableModifier
     ;
 
 classDeclaration
-    : CLASS throwawayIdentifier typeParameters?
+    : CLASS IDENTIFIER typeParameters?
       (EXTENDS typeType)?
       (IMPLEMENTS typeList)?
       classBody
@@ -86,7 +85,7 @@ typeParameters
     ;
 
 typeParameter
-    : annotation* throwawayIdentifier (EXTENDS typeBound)?
+    : annotation* IDENTIFIER (EXTENDS typeBound)?
     ;
 
 typeBound
@@ -94,7 +93,7 @@ typeBound
     ;
 
 enumDeclaration
-    : ENUM throwawayIdentifier (IMPLEMENTS typeList)? '{' enumConstants? ','? enumBodyDeclarations? '}'
+    : ENUM IDENTIFIER (IMPLEMENTS typeList)? '{' enumConstants? ','? enumBodyDeclarations? '}'
     ;
 
 enumConstants
@@ -102,7 +101,7 @@ enumConstants
     ;
 
 enumConstant
-    : annotation* throwawayIdentifier arguments? classBody?
+    : annotation* IDENTIFIER arguments? classBody?
     ;
 
 enumBodyDeclarations
@@ -110,7 +109,7 @@ enumBodyDeclarations
     ;
 
 interfaceDeclaration
-    : INTERFACE throwawayIdentifier typeParameters? (EXTENDS typeList)? interfaceBody
+    : INTERFACE IDENTIFIER typeParameters? (EXTENDS typeList)? interfaceBody
     ;
 
 classBody
@@ -268,22 +267,32 @@ formalParameter
     ;
 
 lastFormalParameter
-    : variableModifier* typeType ELLIPSIS variableDeclaratorId
+    : variableModifier* typeType '...' variableDeclaratorId
     ;
 
 qualifiedName
-    : throwawayIdentifier ('.' IDENTIFIER)*
+    : IDENTIFIER ('.' IDENTIFIER)*
     ;
 
 literal
-    : INTLITERAL
-    | LONGLITERAL
-    | FLOATLITERAL
-    | CHARLITERAL
-    | STRINGLITERAL
-    | TRUE
-    | FALSE
-    | NULL
+    : integerLiteral
+    | floatLiteral
+    | CHAR_LITERAL
+    | STRING_LITERAL
+    | BOOL_LITERAL
+    | NULL_LITERAL
+    ;
+
+integerLiteral
+    : DECIMAL_LITERAL
+    | HEX_LITERAL
+    | OCT_LITERAL
+    | BINARY_LITERAL
+    ;
+
+floatLiteral
+    : FLOAT_LITERAL
+    | HEX_FLOAT_LITERAL
     ;
 
 // ANNOTATIONS
@@ -383,15 +392,15 @@ statement
     | SYNCHRONIZED parExpression block
     | RETURN expression? ';'
     | THROW expression ';'
-    | BREAK throwawayIdentifier? ';'
-    | CONTINUE throwawayIdentifier? ';'
-    | ';'
+    | BREAK IDENTIFIER? ';'
+    | CONTINUE IDENTIFIER? ';'
+    | SEMI
     | statementExpression=expression ';'
-    | identifierLabel=throwawayIdentifier ':' statement
+    | identifierLabel=IDENTIFIER ':' statement
     ;
 
 catchClause
-    : CATCH '(' variableModifier* catchType throwawayIdentifier ')' block
+    : CATCH '(' variableModifier* catchType IDENTIFIER ')' block
     ;
 
 catchType
@@ -422,7 +431,7 @@ switchBlockStatementGroup
     ;
 
 switchLabel
-    : CASE (constantExpression=expression | enumConstantName=throwawayIdentifier) ':'
+    : CASE (constantExpression=expression | enumConstantName=IDENTIFIER) ':'
     | DEFAULT ':'
     ;
 
@@ -451,7 +460,7 @@ expressionList
     ;
 
 methodCall
-    : throwawayIdentifier '(' expressionList? ')'
+    : IDENTIFIER '(' expressionList? ')'
     | THIS '(' expressionList? ')'
     | SUPER '(' expressionList? ')'
     ;
@@ -459,7 +468,7 @@ methodCall
 expression
     : primary
     | expression bop='.'
-      ( throwawayIdentifier
+      ( IDENTIFIER
       | methodCall
       | THIS
       | NEW nonWildcardTypeArguments? innerCreator
@@ -475,7 +484,7 @@ expression
     | prefix=('~'|'!') expression
     | expression bop=('*'|'/'|'%') expression
     | expression bop=('+'|'-') expression
-    | expression ('<' '<' | '>' '>' '>' | '>' '>' | '<<' | '>>>' | '>>' | '>>' '>' | '>>' '>') expression
+    | expression ('<' '<' | '>' '>' '>' | '>' '>') expression
     | expression bop=('<=' | '>=' | '>' | '<') expression
     | expression bop=INSTANCEOF typeType
     | expression bop=('==' | '!=') expression
@@ -491,9 +500,9 @@ expression
     | lambdaExpression // Java8
 
     // Java 8 methodReference
-    | expression COLCOL typeArguments? throwawayIdentifier
-    | typeType COLCOL (typeArguments? throwawayIdentifier | NEW)
-    | classType COLCOL typeArguments? NEW
+    | expression '::' typeArguments? IDENTIFIER
+    | typeType '::' (typeArguments? IDENTIFIER | NEW)
+    | classType '::' typeArguments? NEW
     ;
 
 // Java8
@@ -503,9 +512,9 @@ lambdaExpression
 
 // Java8
 lambdaParameters
-    : throwawayIdentifier
+    : IDENTIFIER
     | '(' formalParameterList? ')'
-    | '(' throwawayIdentifier (',' throwawayIdentifier)* ')'
+    | '(' IDENTIFIER (',' IDENTIFIER)* ')'
     ;
 
 // Java8
@@ -519,13 +528,13 @@ primary
     | THIS
     | SUPER
     | literal
-    | throwawayIdentifier
+    | IDENTIFIER
     | typeTypeOrVoid '.' CLASS
     | nonWildcardTypeArguments (explicitGenericInvocationSuffix | THIS arguments)
     ;
 
 classType
-    : (classOrInterfaceType '.')? annotation* throwawayIdentifier typeArguments?
+    : (classOrInterfaceType '.')? annotation* IDENTIFIER typeArguments?
     ;
 
 creator
@@ -534,12 +543,12 @@ creator
     ;
 
 createdName
-    : throwawayIdentifier typeArgumentsOrDiamond? ('.' throwawayIdentifier typeArgumentsOrDiamond?)*
+    : IDENTIFIER typeArgumentsOrDiamond? ('.' IDENTIFIER typeArgumentsOrDiamond?)*
     | primitiveType
     ;
 
 innerCreator
-    : throwawayIdentifier nonWildcardTypeArgumentsOrDiamond? classCreatorRest
+    : IDENTIFIER nonWildcardTypeArgumentsOrDiamond? classCreatorRest
     ;
 
 arrayCreatorRest
@@ -593,20 +602,14 @@ typeArguments
 
 superSuffix
     : arguments
-    | '.' throwawayIdentifier arguments?
+    | '.' IDENTIFIER arguments?
     ;
 
 explicitGenericInvocationSuffix
     : SUPER superSuffix
-    | throwawayIdentifier arguments
+    | IDENTIFIER arguments
     ;
 
 arguments
     : '(' expressionList? ')'
-    ;
-
-// custom rule, javac treats underscore as a special identifier
-throwawayIdentifier
-    : IDENTIFIER
-    | UNDERSCORE
     ;

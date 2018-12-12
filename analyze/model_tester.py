@@ -33,6 +33,15 @@ class ModelTester:
     try_num_locations = 10  # How many locations do we try?
     num_suggestions = 1000  # How many suggestions do we reveal?
 
+    if "CONST" in all_token_types:
+        idx = all_token_types.index("CONST")
+        all_token_types.remove("CONST")
+        del all_token_type_ids[idx]
+    if "GOTO" in all_token_types:
+        idx = all_token_types.index("GOTO")
+        all_token_types.remove("GOTO")
+        del all_token_type_ids[idx]
+
     @staticmethod
     def _get_first(tup):
         """multiprocessing fails if lambad function exists within the target
@@ -82,6 +91,14 @@ class ModelTester:
                 add_token_types.remove("CUSTOM")
             if "EOF" in add_token_types:
                 add_token_types.remove("EOF")
+
+            # ---Jake Test
+            if "CONST" in add_token_types:
+                add_token_types.remove("CONST")
+            if "GOTO" in add_token_types:
+                add_token_types.remove("GOTO")
+            # ---Jake Test
+
             rand_token = random.choice(add_token_types)
             test_tokens.insert(change_idx, rand_token)
             ModelTester.logger.info("{}: BREAK by {} {} at {}".format(source_path,
@@ -98,6 +115,14 @@ class ModelTester:
                 sub_token_types.remove("CUSTOM")
             if "EOF" in sub_token_types:
                 sub_token_types.remove("EOF")
+
+            # ---Jake Test
+            if "CONST" in sub_token_types:
+                sub_token_types.remove("CONST")
+            if "GOTO" in sub_token_types:
+                sub_token_types.remove("GOTO")
+            # ---Jake Test
+
             rand_token = random.choice(sub_token_types)
             test_tokens[change_idx] = rand_token
             ModelTester.logger.info("{}: BREAK by {} from {} to {} at {}".format(
@@ -421,6 +446,7 @@ class ModelTester:
         print("{name} found {found}/{total} true fixes (Mean Reciprocal Rank={mrr:.2})".format(
             name=model_name,
             found=len(model_found), total=len(rank_list), mrr=mrr))
+        print(rank_list)
 
     def __init__(self, input_file_path):
         """
@@ -464,6 +490,7 @@ class ModelTester:
         with Pool() as pool:
             for (source_path, fix_probs) in pool.imap(loc_and_fix_func, self.one_error_tokens.items()):
                 orig_seq = self.file_to_tokens[source_path]
+                org_ints = list(map(lambda x: str(SourceCodeParser.JAVA_TOKEN_TYPE_MAP[x]), self.file_to_tokens[source_path]))
                 rank = 1
                 for fix_prob in fix_probs:
                     # unpack
@@ -471,7 +498,7 @@ class ModelTester:
                     ModelTester.logger.info("%s: RANK %d SUGGEST %s %s AT %d (score: %.2f)",
                                             model_name, rank, action,
                                             to_change_token, token_idx, new_score)
-                    if fix_sequence == orig_seq:
+                    if fix_sequence == orig_seq or fix_sequence == org_ints:
                         break
                     else:
                         rank += 1
@@ -499,7 +526,7 @@ class ModelTester:
         # atn_ranks = self._run_model_evaluation(ModelTester._atn_hmm_locate_and_fix, "atn-hmm")
         # t10_ranks = self._run_model_evaluation(ModelTester._train10_hmm_locate_and_fix, "t10-hmm")
         # t100_ranks = self._run_model_evaluation(ModelTester._train100_hmm_locate_and_fix, "t100-hmm")
-        # tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
+        tsmooth_ranks = self._run_model_evaluation(ModelTester._trainsmooth_hmm_locate_and_fix, "tsmooth-hmm")
 
         # PRINT SUMMARY OF RESULTS AND MODEL PERFORMANCE
         print("\n---- SUMMARY OF CHANGES ----")
@@ -515,7 +542,7 @@ class ModelTester:
         # ModelTester._print_model_summary(atn_ranks, model_name="atn-hmm")
         # ModelTester._print_model_summary(t10_ranks, model_name="t10-hmm")
         # ModelTester._print_model_summary(t100_ranks, model_name="t100-hmm")
-        # ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
+        ModelTester._print_model_summary(tsmooth_ranks, model_name="tsmooth-hmm")
         print()
 
     @classmethod
@@ -526,4 +553,5 @@ class ModelTester:
         # cls.rule_hmm = RuleJavaTokenHMM()
         # cls.t10_hmm = Trained10StateHMM()
         # cls.t100_hmm = Trained100StateHMM()
-        # cls.tsmooth_hmm = TrainedSmoothStateHMM()
+        cls.tsmooth_hmm = TrainedSmoothStateHMM()
+
