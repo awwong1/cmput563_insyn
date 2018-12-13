@@ -32,6 +32,8 @@ model_name = {
     "86-Labeled-HMM"
 };
 
+mean(reciprocal_ranks, 2)
+
 clf;
 b = boxplot(reciprocal_ranks');
 %h = violin(reciprocal_ranks');

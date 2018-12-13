@@ -25,9 +25,9 @@ rr_tlabeled <- unlist(lapply(tlabeled, get_rr))
 model_names <- c(
     "10-Gram",
     "2-Gram",
-    "ATN-HMM",
-    "100-Unsupev-HMM",
-    "86-Label-HMM"
+    "1113-ATN-HMM",
+    "100-Unsuperv-HMM",
+    "86-RuleSuperv-HMM"
 );
 
 width <- 14
@@ -36,16 +36,18 @@ main <- "Reciprocal Rank by Probabilistic Model"
 ylabel <- "Reciprocal Rank"
 xlabel <- "Probabilsitic Model"
 dev.new(width=width, height=height, unit="in")
+png("violin-plot.png", width=820, height=480)
 vioplot(rr_n10, rr_n2, rr_atn, rr_t100, rr_tlabeled,
     names=model_names)
 title(main, ylab=ylabel, xlab=xlabel)
-dev.copy(postscript, "violin-plot.ps")
+# dev.copy(postscript, "violin-plot.ps")
 dev.off()
 
 dev.new(width=width, height=height, unit="in")
+png("box-plot.png", width=820, height=480)
 boxplot(rr_n10, rr_n2, rr_atn, rr_t100, rr_tlabeled,
     names=model_names)
 title(main, ylab=ylabel, xlab=xlabel)
-dev.copy(postscript, "box-plot.ps")
+# dev.copy(postscript, "box-plot.ps")
 dev.off()
 
